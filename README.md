@@ -14,13 +14,26 @@ Also, please be aware that this is just me fooling around over a weekend. I will
 
 ## Installation
 
-First, compile the provider:
+Download the provider:
+
+```shell
+$ go get github.com/jtopjian/terraform-provider-openstack
+```
+
+Download and install the dependencies:
+
+```shell
+$ cd $GOPATH/src/github.com/jtopjian/terraform-provider-openstack
+$ godep restore
+```
+
+Compile it:
 
 ```shell
 $ go build -o terraform-provider-openstack
 ```
 
-Then copy it to the directory you keep Terraform:
+Copy it to the directory you keep Terraform:
 
 ```shell
 $ sudo cp terraform-provider-openstack /usr/local/bin/terraform
