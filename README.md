@@ -69,3 +69,8 @@ $ terraform destroy
 ```
 
 Note that the `image_ref` and the `flavor_ref` must be the UUIDs and not the canonical names. I've seen how to make this more user friendly from code within gophercloud as well as some of the Packer source.
+
+## Credits
+
+* Eric / haklop for his initial [work](https://github.com/haklop/terraform)
+* tkak for their [object storage provider](https://github.com/tkak/terraform-provider-conoha) which I would have been lost without.
