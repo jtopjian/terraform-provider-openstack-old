@@ -1,6 +1,6 @@
 # terraform-provider-openstack
 
-This is an experimental OpenStack provider for OpenStack. It is based off of the excellent work already done by haklop which can be found [here](https://github.com/haklop/terraform). The main difference is that it works with the latest version of gophercloud and does not need to be compiled along with the entire Terraform code.
+This is an experimental OpenStack provider for Terraform. It is based off of the excellent work already done by haklop which can be found [here](https://github.com/haklop/terraform). The main difference is that it works with the latest version of gophercloud and does not need to be compiled along with the entire Terraform code.
 
 However, it only supports the `openstack_compute` resource at this time. Even more, not all functionality (such as resizing) has been implemented or tested.
 
