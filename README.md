@@ -43,7 +43,7 @@ $ sudo cp terraform-provider-openstack /usr/local/bin/terraform
 
 ### openrc file
 
-All authentication can be done by sourcing an `openrc`-style file.
+All authentication can be done by sourcing an `openrc`-style file. For more information on that, see [http://docs.openstack.org/user-guide/content/cli_openrc.html]. In short, this plugin will use environment variables that do things like set your username, password, API endpoint, and more.
 
 ### Terraform Configuration
 
@@ -57,6 +57,7 @@ resource "openstack_compute" "test" {
   image_ref = "ecdd59d0-eff5-4d1b-be5e-dde94ffcfdb2"
   flavor_ref = "1"
   key_name = "my_key"
+  networks = [ "94e12a2a-d692-4e6f-8e34-560e8a97ead5" ]
 }
 ```
 
@@ -68,7 +69,7 @@ $ terraform build
 $ terraform destroy
 ```
 
-Note that the `image_ref` and the `flavor_ref` must be the UUIDs and not the canonical names. I've seen how to make this more user friendly from code within gophercloud as well as some of the Packer source.
+Note that the `image_ref`, `flavor_ref`, and `networks` must be the UUIDs and not the canonical names. Also that the networks must be in array/list format. I've seen how to make this more user friendly from code within gophercloud as well as some of the Packer source.
 
 ## Credits
 
