@@ -87,6 +87,7 @@ resource "openstack_compute" "test" {
   # or flavor_name = "m1.large"
   key_name = "my_key"
   networks = [ "94e12a2a-d692-4e6f-8e34-560e8a97ead5" ]
+  security_groups = [ "default", "my_custom_group" ]
 }
 ```
 
