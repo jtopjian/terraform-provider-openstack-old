@@ -81,7 +81,8 @@ provider "openstack" {}
 
 resource "openstack_compute" "test" {
   name = "jttest"
-  image_ref = "ecdd59d0-eff5-4d1b-be5e-dde94ffcfdb2"
+  image_id = "ecdd59d0-eff5-4d1b-be5e-dde94ffcfdb2"
+  # or image_name ="Ubuntu 14.04"
   flavor_ref = "1"
   key_name = "my_key"
   networks = [ "94e12a2a-d692-4e6f-8e34-560e8a97ead5" ]
@@ -98,7 +99,7 @@ $ terraform destroy
 
 ## Notes
 
-`image_ref`, `flavor_ref`, and `networks` must be the UUIDs and not the canonical names. Also that the networks must be in array/list format. I've seen how to make this more user friendly from code within gophercloud as well as some of the Packer source.
+`image_id`, `flavor_ref`, and `networks` must be the UUIDs and not the canonical names. Also that the networks must be in array/list format. I've seen how to make this more user friendly from code within gophercloud as well as some of the Packer source.
 
 `networks` is optional if your OpenStack cloud only has one network.
 
