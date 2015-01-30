@@ -372,7 +372,8 @@ func resourceComputeRead(d *schema.ResourceData, meta interface{}) error {
 	// TODO check networks, seucrity groups and floating ip
 
 	d.Set("name", server.Name)
-	d.Set("flavor_ref", server.Flavor["ID"])
+	d.Set("flavor_id", server.Flavor["ID"])
+	d.Set("flavor_name", server.Flavor["Name"])
 	d.Set("image_id", server.Image["ID"])
 	d.Set("image_name", server.Image["Name"])
 
