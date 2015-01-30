@@ -198,6 +198,8 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 		SecurityGroups: securityGroups,
 		Networks:       networks,
 		UserData:       userData,
+		AdminPass:      d.Get("admin_pass").(string),
+		ConfigDrive:    d.Get("config_drive").(bool),
 	}
 
 	keyName := d.Get("key_name").(string)

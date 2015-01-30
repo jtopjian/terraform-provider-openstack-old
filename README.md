@@ -89,6 +89,7 @@ resource "openstack_compute" "test" {
   networks = [ "94e12a2a-d692-4e6f-8e34-560e8a97ead5" ]
   security_groups = [ "default", "my_custom_group" ]
   user_data = "#!/bin/bash\nping -c 10 yahoo.com"
+  config_drive = true
 }
 ```
 
@@ -105,6 +106,8 @@ $ terraform destroy
 `image_id`, `flavor_ref`, and `networks` must be the UUIDs and not the canonical names. Also that the networks must be in array/list format.
 
 `networks` is optional if your OpenStack cloud only has one network.
+
+`admin_pass` is enabled, but I haven't verified it yet.
 
 ## Credits
 
