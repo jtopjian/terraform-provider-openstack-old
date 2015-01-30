@@ -74,7 +74,7 @@ For more information on OpenStack `openrc` files, see [http://docs.openstack.org
 
 ### Terraform Configuration
 
-I have tested this provider with this extremely simple example:
+The following examples have been tested:
 
 ```
 provider "openstack" {}
@@ -88,6 +88,7 @@ resource "openstack_compute" "test" {
   key_name = "my_key"
   networks = [ "94e12a2a-d692-4e6f-8e34-560e8a97ead5" ]
   security_groups = [ "default", "my_custom_group" ]
+  user_data = "#!/bin/bash\nping -c 10 yahoo.com"
 }
 ```
 

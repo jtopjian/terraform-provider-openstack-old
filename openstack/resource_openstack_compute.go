@@ -162,13 +162,10 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 		securityGroups = append(securityGroups, v.(string))
 	}
 
-	// API needs it to be base64 encoded.
-	/*
-	   userData := ""
-	   if v := d.Get("user_data"); v != nil {
-	     userData = base64.StdEncoding.EncodeToString([]byte(v.(string)))
-	   }
-	*/
+	userData := []byte("")
+	if v := d.Get("user_data"); v != nil {
+		userData = []byte(v.(string))
+	}
 
 	// figure out the image
 	imageID := d.Get("image_id").(string)
@@ -196,8 +193,7 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 		FlavorRef:      flavorID,
 		SecurityGroups: securityGroups,
 		Networks:       networks,
-		// Need to convert this to type byte
-		//UserData:       userData,
+		UserData:       userData,
 	}
 
 	keyName := d.Get("key_name").(string)
@@ -371,6 +367,7 @@ func resourceComputeRead(d *schema.ResourceData, meta interface{}) error {
 
 	// TODO check networks, seucrity groups and floating ip
 
+	// where is this even taking place?
 	d.Set("name", server.Name)
 	d.Set("flavor_id", server.Flavor["ID"])
 	d.Set("flavor_name", server.Flavor["Name"])
