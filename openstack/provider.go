@@ -1,6 +1,7 @@
 package openstack
 
 import (
+	"errors"
 	"os"
 
 	"github.com/hashicorp/terraform/helper/schema"
@@ -16,8 +17,6 @@ func Provider() terraform.ResourceProvider {
 				Required:    true,
 			},
 
-			// One of these two is required
-			// TODO: add logic to support that
 			"user_id": &schema.Schema{
 				Type:        schema.TypeString,
 				DefaultFunc: envDefaultFunc("OS_USERID"),
@@ -36,8 +35,6 @@ func Provider() terraform.ResourceProvider {
 				Required:    true,
 			},
 
-			// One of these two is required
-			// TODO: add logic to support that
 			"tenant_id": &schema.Schema{
 				Type:        schema.TypeString,
 				DefaultFunc: envDefaultFunc("OS_TENANT_ID"),
@@ -64,11 +61,11 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
+			"openstack_compute": resourceCompute(),
 			//"openstack_network":         resourceNetwork(),
 			//"openstack_subnet":          resourceSubnet(),
 			//"openstack_router":          resourceRouter(),
 			//"openstack_security_group":  resourceSecurityGroup(),
-			"openstack_compute": resourceCompute(),
 			//"openstack_lbaas":           resourceLBaaS(),
 			//"openstack_firewall":        resourceFirewall(),
 			//"openstack_firewall_policy": resourceFirewallPolicy(),
@@ -90,6 +87,19 @@ func envDefaultFunc(k string) schema.SchemaDefaultFunc {
 }
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
+
+	user_id := d.Get("user_id").(string)
+	username := d.Get("username").(string)
+	if user_id == "" && username == "" {
+		return nil, errors.New("At least one of user_id or username must be specified")
+	}
+
+	tenant_id := d.Get("tenant_id").(string)
+	tenant_name := d.Get("tenant_name").(string)
+	if tenant_id == "" && tenant_name == "" {
+		return nil, errors.New("At least one of tenant_id or tenant_name must be specified")
+	}
+
 	config := Config{
 		IdentityEndpoint: d.Get("identity_endpoint").(string),
 		UserID:           d.Get("user_id").(string),
