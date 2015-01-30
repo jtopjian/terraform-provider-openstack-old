@@ -42,9 +42,14 @@ func resourceCompute() *schema.Resource {
 				ForceNew: true,
 			},
 
-			"flavor_ref": &schema.Schema{
+			"flavor_id": &schema.Schema{
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
+			},
+
+			"flavor_name": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
 			},
 
 			"security_groups": &schema.Schema{
@@ -139,13 +144,6 @@ func resourceCompute() *schema.Resource {
 }
 
 func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
-	// check for required parameters
-	// is there a better way to do this?
-	imageID := d.Get("image_id").(string)
-	imageName := d.Get("image_name").(string)
-	if imageID == "" && imageName == "" {
-		return errors.New("At least one of image_id or image_name is required.")
-	}
 
 	client, err := getClient(d, meta)
 	if err != nil {
@@ -173,10 +171,20 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 	*/
 
 	// figure out the image
+	imageID := d.Get("image_id").(string)
 	if imageID == "" {
 		// image_name has to be set due to prior checking
 		// look up all accessible images and find a match
-		imageID, err = GetImageIDByName(client, imageName)
+		imageID, err = GetImageIDByName(client, d.Get("image_name").(string))
+		if err != nil {
+			return err
+		}
+	}
+
+	// figure out the flavor
+	flavorID := d.Get("flavor_id").(string)
+	if flavorID == "" {
+		flavorID, err = GetFlavorIDByName(client, d.Get("flavor_name").(string))
 		if err != nil {
 			return err
 		}
@@ -185,7 +193,7 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 	baseOpts := &servers.CreateOpts{
 		Name:           d.Get("name").(string),
 		ImageRef:       imageID,
-		FlavorRef:      d.Get("flavor_ref").(string),
+		FlavorRef:      flavorID,
 		SecurityGroups: securityGroups,
 		Networks:       networks,
 		// Need to convert this to type byte
@@ -268,7 +276,6 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceComputeDelete(d *schema.ResourceData, meta interface{}) error {
-
 	client, err := getClient(d, meta)
 	if err != nil {
 		return err
@@ -293,7 +300,6 @@ func resourceComputeDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceComputeUpdate(d *schema.ResourceData, meta interface{}) error {
-
 	client, err := getClient(d, meta)
 	if err != nil {
 		return err
@@ -374,7 +380,6 @@ func resourceComputeRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func waitForServerState(client *gophercloud.ServiceClient, server *servers.Server) resource.StateRefreshFunc {
-
 	return func() (interface{}, string, error) {
 		latest, err := servers.Get(client, server.ID).Extract()
 		if err != nil {
@@ -387,6 +392,10 @@ func waitForServerState(client *gophercloud.ServiceClient, server *servers.Serve
 }
 
 func getClient(d *schema.ResourceData, meta interface{}) (*gophercloud.ServiceClient, error) {
+	err := checkParameters(d)
+	if err := checkParameters(d); err != nil {
+		return nil, err
+	}
 
 	provider := meta.(*gophercloud.ProviderClient)
 	client, err := openstack.NewComputeV2(provider, gophercloud.EndpointOpts{
@@ -398,5 +407,22 @@ func getClient(d *schema.ResourceData, meta interface{}) (*gophercloud.ServiceCl
 	}
 
 	return client, nil
+}
 
+func checkParameters(d *schema.ResourceData) error {
+	// check for required parameters
+	// is there a better way to do this?
+	imageID := d.Get("image_id").(string)
+	imageName := d.Get("image_name").(string)
+	if imageID == "" && imageName == "" {
+		return errors.New("At least one of image_id or image_name is required.")
+	}
+
+	flavorID := d.Get("flavor_id").(string)
+	flavorName := d.Get("flavor_name").(string)
+	if flavorID == "" && flavorName == "" {
+		return errors.New("At least one of flavor_id or flavor_name is required.")
+	}
+
+	return nil
 }
