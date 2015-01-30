@@ -2,7 +2,6 @@ package openstack
 
 import (
 	"crypto/sha1"
-	//"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"log"
@@ -105,9 +104,6 @@ func resourceCompute() *schema.Resource {
 				Type:     schema.TypeMap,
 				Optional: true,
 				Computed: true,
-				Elem: &schema.Schema{
-					Type: schema.TypeMap,
-				},
 			},
 
 			// No idea how to do this yet.
