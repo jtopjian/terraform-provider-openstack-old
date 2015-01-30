@@ -5,6 +5,7 @@ import (
 	//"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"log"
 	"time"
 
 	"github.com/hashicorp/terraform/helper/hashcode"
@@ -13,6 +14,8 @@ import (
 	"github.com/rackspace/gophercloud"
 	"github.com/rackspace/gophercloud/openstack"
 	"github.com/rackspace/gophercloud/openstack/compute/v2/extensions/keypairs"
+	"github.com/rackspace/gophercloud/openstack/compute/v2/flavors"
+	"github.com/rackspace/gophercloud/openstack/compute/v2/images"
 	"github.com/rackspace/gophercloud/openstack/compute/v2/servers"
 	//"github.com/haklop/gophercloud-extensions/network"
 )
@@ -98,9 +101,14 @@ func resourceCompute() *schema.Resource {
 				},
 			},
 
-			// No idea how to do this yet.
-			//"metadata": &schema.Schema{
-			//},
+			"metadata": &schema.Schema{
+				Type:     schema.TypeMap,
+				Optional: true,
+				Computed: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeMap,
+				},
+			},
 
 			// No idea how to do this yet.
 			//"personality": &schema.Schema{
@@ -148,7 +156,6 @@ func resourceCompute() *schema.Resource {
 }
 
 func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
-
 	client, err := getClient(d, meta)
 	if err != nil {
 		return err
@@ -191,6 +198,13 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
+	metadata := make(map[string]string)
+	if m, ok := d.GetOk("metadata"); ok {
+		for k, v := range m.(map[string]interface{}) {
+			metadata[k] = v.(string)
+		}
+	}
+
 	baseOpts := &servers.CreateOpts{
 		Name:           d.Get("name").(string),
 		ImageRef:       imageID,
@@ -200,6 +214,7 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 		UserData:       userData,
 		AdminPass:      d.Get("admin_pass").(string),
 		ConfigDrive:    d.Get("config_drive").(bool),
+		Metadata:       metadata,
 	}
 
 	keyName := d.Get("key_name").(string)
@@ -214,7 +229,30 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
+	// get full info about the new server
+	server, err := servers.Get(client, newServer.ID).Extract()
+	if err != nil {
+		return err
+	}
+
+	flavor, err := flavors.Get(client, server.Flavor["id"].(string)).Extract()
+	if err != nil {
+		return err
+	}
+
+	image, err := images.Get(client, server.Image["id"].(string)).Extract()
+	if err != nil {
+		return err
+	}
+
 	d.SetId(newServer.ID)
+	d.Set("name", server.Name)
+	d.Set("flavor_id", flavor.ID)
+	d.Set("flavor_name", flavor.Name)
+	d.Set("image_id", image.ID)
+	d.Set("image_name", image.Name)
+
+	log.Printf("[INFO] Server info: %v", server)
 
 	stateConf := &resource.StateChangeConf{
 		Pending:    []string{"BUILD"},
@@ -379,6 +417,8 @@ func resourceComputeRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("flavor_name", server.Flavor["Name"])
 	d.Set("image_id", server.Image["ID"])
 	d.Set("image_name", server.Image["Name"])
+
+	log.Printf("[INFO] Server info: %v", server)
 
 	return nil
 }
