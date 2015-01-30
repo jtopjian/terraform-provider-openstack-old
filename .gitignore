@@ -27,3 +27,4 @@ terraform.*
 crash.log
 Godeps/Readme
 Godeps/_workspace
+**/*.swp
