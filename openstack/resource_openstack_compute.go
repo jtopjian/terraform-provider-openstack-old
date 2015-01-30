@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	//"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"time"
 
 	"github.com/hashicorp/terraform/helper/hashcode"
@@ -29,9 +30,15 @@ func resourceCompute() *schema.Resource {
 				Required: true,
 			},
 
-			"image_ref": &schema.Schema{
+			"image_id": &schema.Schema{
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
+				ForceNew: true,
+			},
+
+			"image_name": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
 				ForceNew: true,
 			},
 
@@ -132,6 +139,13 @@ func resourceCompute() *schema.Resource {
 }
 
 func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
+	// check for required parameters
+	// is there a better way to do this?
+	imageID := d.Get("image_id").(string)
+	imageName := d.Get("image_name").(string)
+	if imageID == "" && imageName == "" {
+		return errors.New("At least one of image_id or image_name is required.")
+	}
 
 	client, err := getClient(d, meta)
 	if err != nil {
@@ -158,9 +172,19 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 	   }
 	*/
 
+	// figure out the image
+	if imageID == "" {
+		// image_name has to be set due to prior checking
+		// look up all accessible images and find a match
+		imageID, err = GetImageIDByName(client, imageName)
+		if err != nil {
+			return err
+		}
+	}
+
 	base_opts := &servers.CreateOpts{
 		Name:           d.Get("name").(string),
-		ImageRef:       d.Get("image_ref").(string),
+		ImageRef:       imageID,
 		FlavorRef:      d.Get("flavor_ref").(string),
 		SecurityGroups: security_groups,
 		Networks:       networks,
@@ -329,7 +353,6 @@ func resourceComputeUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceComputeRead(d *schema.ResourceData, meta interface{}) error {
-
 	client, err := getClient(d, meta)
 	if err != nil {
 		return err
@@ -344,6 +367,8 @@ func resourceComputeRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("name", server.Name)
 	d.Set("flavor_ref", server.Flavor["ID"])
+	d.Set("image_id", server.Image["ID"])
+	d.Set("image_name", server.Image["Name"])
 
 	return nil
 }
