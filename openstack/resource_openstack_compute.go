@@ -158,10 +158,10 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 		networks = append(networks, servers.Network{UUID: v.(string)})
 	}
 
-	sec_groups := d.Get("security_groups").(*schema.Set)
-	var security_groups []string
-	for _, v := range sec_groups.List() {
-		security_groups = append(security_groups, v.(string))
+	secGroups := d.Get("security_groups").(*schema.Set)
+	var securityGroups []string
+	for _, v := range secGroups.List() {
+		securityGroups = append(securityGroups, v.(string))
 	}
 
 	// API needs it to be base64 encoded.
@@ -182,23 +182,23 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	base_opts := &servers.CreateOpts{
+	baseOpts := &servers.CreateOpts{
 		Name:           d.Get("name").(string),
 		ImageRef:       imageID,
 		FlavorRef:      d.Get("flavor_ref").(string),
-		SecurityGroups: security_groups,
+		SecurityGroups: securityGroups,
 		Networks:       networks,
 		// Need to convert this to type byte
 		//UserData:       userData,
 	}
 
-	key_name := d.Get("key_name").(string)
-	key_opts := keypairs.CreateOptsExt{
-		CreateOptsBuilder: base_opts,
-		KeyName:           key_name,
+	keyName := d.Get("key_name").(string)
+	keyOpts := keypairs.CreateOptsExt{
+		CreateOptsBuilder: baseOpts,
+		KeyName:           keyName,
 	}
 
-	newServer, err := servers.Create(client, key_opts).Extract()
+	newServer, err := servers.Create(client, keyOpts).Extract()
 
 	if err != nil {
 		return err
