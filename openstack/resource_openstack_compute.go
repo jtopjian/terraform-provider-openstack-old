@@ -138,6 +138,7 @@ func resourceCompute() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true, // TODO handle update
+				Computed: true,
 			},
 
 			// defined in haklop's network extensions
@@ -149,6 +150,18 @@ func resourceCompute() *schema.Resource {
 
 			"floating_ip": &schema.Schema{
 				Type:     schema.TypeString,
+				Computed: true,
+			},
+
+			// read-only
+			"created": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+			},
+			"updated": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
 				Computed: true,
 			},
 		},
@@ -224,33 +237,20 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	newServer, err := servers.Create(client, keyOpts).Extract()
-
-	if err != nil {
-		return err
-	}
-
-	// get full info about the new server
-	server, err := servers.Get(client, newServer.ID).Extract()
-	if err != nil {
-		return err
-	}
-
-	flavor, err := flavors.Get(client, server.Flavor["id"].(string)).Extract()
-	if err != nil {
-		return err
-	}
-
-	image, err := images.Get(client, server.Image["id"].(string)).Extract()
 	if err != nil {
 		return err
 	}
 
 	d.SetId(newServer.ID)
-	d.Set("name", server.Name)
-	d.Set("flavor_id", flavor.ID)
-	d.Set("flavor_name", flavor.Name)
-	d.Set("image_id", image.ID)
-	d.Set("image_name", image.Name)
+
+	// get full info about the new server
+	server, err := getServerDetails(client, newServer.ID)
+	if err != nil {
+		return err
+	}
+	for k, v := range server {
+		d.Set(k, v)
+	}
 
 	log.Printf("[INFO] Server info: %v", server)
 
@@ -404,21 +404,14 @@ func resourceComputeRead(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	server, err := servers.Get(client, d.Id()).Extract()
+	server, err := getServerDetails(client, d.Id())
 	if err != nil {
 		return nil
 	}
 
-	// TODO check networks, seucrity groups and floating ip
-
-	// where is this even taking place?
-	d.Set("name", server.Name)
-	d.Set("flavor_id", server.Flavor["ID"])
-	d.Set("flavor_name", server.Flavor["Name"])
-	d.Set("image_id", server.Image["ID"])
-	d.Set("image_name", server.Image["Name"])
-
-	log.Printf("[INFO] Server info: %v", server)
+	for k, v := range server {
+		d.Set(k, v)
+	}
 
 	return nil
 }
@@ -469,4 +462,41 @@ func checkParameters(d *schema.ResourceData) error {
 	}
 
 	return nil
+}
+
+func getServerDetails(client *gophercloud.ServiceClient, serverID string) (map[string]string, error) {
+	// TODO check networks, seucrity groups and floating ip
+	serverDetails := make(map[string]string)
+
+	server, err := servers.Get(client, serverID).Extract()
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("[INFO] Server info: %v", server)
+
+	flavor, err := flavors.Get(client, server.Flavor["id"].(string)).Extract()
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("[INFO] Flavor info: %v", flavor)
+
+	image, err := images.Get(client, server.Image["id"].(string)).Extract()
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("[INFO] Image info: %v", image)
+
+	serverDetails["name"] = server.Name
+	serverDetails["id"] = server.ID
+	serverDetails["tenant_id"] = server.TenantID
+	serverDetails["user_id"] = server.UserID
+	serverDetails["updated"] = server.Updated
+	serverDetails["created"] = server.Created
+	serverDetails["key_name"] = server.KeyName
+	serverDetails["image_id"] = image.ID
+	serverDetails["image_name"] = image.Name
+	serverDetails["flavor_id"] = flavor.ID
+	serverDetails["flavor_name"] = flavor.Name
+
+	return serverDetails, nil
 }
