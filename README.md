@@ -41,9 +41,36 @@ $ sudo cp terraform-provider-openstack /usr/local/bin/terraform
 
 ## Usage
 
-### openrc file
+### Provider Authentication
 
-All authentication can be done by sourcing an `openrc`-style file. For more information on that, see [http://docs.openstack.org/user-guide/content/cli_openrc.html]. In short, this plugin will use environment variables that do things like set your username, password, API endpoint, and more.
+You can authenticate with the OpenStack cloud by either explicitly setting parameters or using an `openrc`-style file.
+
+#### Explicit Parameters
+
+```
+provider "openstack" {
+  identity_endpoint = "http://example.com:5000/v2.0"
+  username = "jdoe"
+  tenant_name = "jdoe"
+  password = "password"
+}
+```
+
+#### openrc-style
+
+First, source your `openrc` file:
+
+```shell
+$ source openrc
+```
+
+Next, configure the provider in the `*.tf` file:
+
+```
+provier "openstack" { }
+```
+
+For more information on OpenStack `openrc` files, see [http://docs.openstack.org/user-guide/content/cli_openrc.html].
 
 ### Terraform Configuration
 
@@ -69,7 +96,11 @@ $ terraform build
 $ terraform destroy
 ```
 
-Note that the `image_ref`, `flavor_ref`, and `networks` must be the UUIDs and not the canonical names. Also that the networks must be in array/list format. I've seen how to make this more user friendly from code within gophercloud as well as some of the Packer source.
+## Notes
+
+`image_ref`, `flavor_ref`, and `networks` must be the UUIDs and not the canonical names. Also that the networks must be in array/list format. I've seen how to make this more user friendly from code within gophercloud as well as some of the Packer source.
+
+`networks` is optional if your OpenStack cloud only has one network.
 
 ## Credits
 
