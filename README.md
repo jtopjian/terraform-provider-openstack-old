@@ -90,6 +90,10 @@ resource "openstack_compute" "test" {
   security_groups = [ "default", "my_custom_group" ]
   user_data = "#!/bin/bash\nping -c 10 yahoo.com"
   config_drive = true
+  metadata {
+    foo = "bar"
+    baz = "foo"
+  }
 }
 ```
 
