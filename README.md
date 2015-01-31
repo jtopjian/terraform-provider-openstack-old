@@ -113,15 +113,22 @@ $ terraform destroy
 
 `admin_pass` is enabled, but I haven't verified it yet.
 
-`network` is available for specific networking configuration. One or more of the following can be specified:
+`network` is available to define network access at a more detailed level. You can specify one or more `network` blocks to attach your instance to one or more networks. The benefit of using this over `networks` is so you can specify an optional `port` or `fixed_ip`, whereas `networks` only takes a network UUID and will automatically configure the instance (usually DHCP).
 
 ```
 network {
   uuid: "94e12a2a-d692-4e6f-8e34-560e8a97ead5"
   # Not fully tested yet
+  # Optional, too
   port: "(port uuid)"
   # Not fully tested yet
+  # Optional, too
   fixed_ip: "10.1.1.150"
+}
+
+network {
+  uuid: "e38c6290-97e5-4333-bd92-0f9ee792bd0f"
+  fixed_ip: "192.168.1.150"
 }
 ```
 
