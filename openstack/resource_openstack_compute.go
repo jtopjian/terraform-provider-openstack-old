@@ -18,7 +18,6 @@ import (
 	"github.com/rackspace/gophercloud/openstack/compute/v2/flavors"
 	"github.com/rackspace/gophercloud/openstack/compute/v2/images"
 	"github.com/rackspace/gophercloud/openstack/compute/v2/servers"
-	//"github.com/haklop/gophercloud-extensions/network"
 )
 
 func resourceCompute() *schema.Resource {
@@ -92,6 +91,13 @@ func resourceCompute() *schema.Resource {
 				ForceNew: true,
 			},
 
+			"network_provider": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+				Default:  "neutron",
+			},
+
 			"networks": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -102,7 +108,7 @@ func resourceCompute() *schema.Resource {
 				},
 			},
 
-			"networks_advanced": &schema.Schema{
+			"network": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
 				ForceNew: true, // TODO handle update
@@ -126,7 +132,7 @@ func resourceCompute() *schema.Resource {
 						},
 					},
 				},
-				Set: resourceComputeNetworksAdvanced,
+				Set: resourceComputeNetwork,
 			},
 
 			"metadata": &schema.Schema{
@@ -189,6 +195,12 @@ func resourceCompute() *schema.Resource {
 				Optional: true,
 				Computed: true,
 			},
+			"network_info": &schema.Schema{
+				Type:     schema.TypeMap,
+				Optional: true,
+				ForceNew: true, // TODO handle update
+				Computed: true,
+			},
 		},
 	}
 }
@@ -200,8 +212,8 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	var networks []servers.Network
-	if v := d.Get("networks_advanced"); v != nil {
-		log.Printf("networks_advanced: %v", v)
+	if v := d.Get("network"); v != nil {
+		log.Printf("network: %v", v)
 		vs := v.(*schema.Set).List()
 		if len(vs) > 0 {
 			for _, v := range vs {
@@ -284,15 +296,9 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 	d.SetId(newServer.ID)
 
 	// get full info about the new server
-	server, err := getServerDetails(client, newServer.ID)
-	if err != nil {
+	if err := setServerDetails(client, newServer.ID, d); err != nil {
 		return err
 	}
-	for k, v := range server {
-		d.Set(k, v)
-	}
-
-	log.Printf("[INFO] Server info: %v", server)
 
 	stateConf := &resource.StateChangeConf{
 		Pending:    []string{"BUILD"},
@@ -444,13 +450,8 @@ func resourceComputeRead(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	server, err := getServerDetails(client, d.Id())
-	if err != nil {
-		return nil
-	}
-
-	for k, v := range server {
-		d.Set(k, v)
+	if err := setServerDetails(client, d.Id(), d); err != nil {
+		return err
 	}
 
 	return nil
@@ -504,44 +505,62 @@ func checkParameters(d *schema.ResourceData) error {
 	return nil
 }
 
-func getServerDetails(client *gophercloud.ServiceClient, serverID string) (map[string]string, error) {
+func setServerDetails(client *gophercloud.ServiceClient, serverID string, d *schema.ResourceData) error {
 	// TODO check networks, seucrity groups and floating ip
-	serverDetails := make(map[string]string)
-
 	server, err := servers.Get(client, serverID).Extract()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	log.Printf("[INFO] Server info: %v", server)
 
 	flavor, err := flavors.Get(client, server.Flavor["id"].(string)).Extract()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	log.Printf("[INFO] Flavor info: %v", flavor)
 
 	image, err := images.Get(client, server.Image["id"].(string)).Extract()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	log.Printf("[INFO] Image info: %v", image)
 
-	serverDetails["name"] = server.Name
-	serverDetails["id"] = server.ID
-	serverDetails["tenant_id"] = server.TenantID
-	serverDetails["user_id"] = server.UserID
-	serverDetails["updated"] = server.Updated
-	serverDetails["created"] = server.Created
-	serverDetails["key_name"] = server.KeyName
-	serverDetails["image_id"] = image.ID
-	serverDetails["image_name"] = image.Name
-	serverDetails["flavor_id"] = flavor.ID
-	serverDetails["flavor_name"] = flavor.Name
+	d.Set("name", server.Name)
+	d.Set("id", server.ID)
+	d.Set("tenant_id", server.TenantID)
+	d.Set("user_id", server.UserID)
+	d.Set("updated", server.Updated)
+	d.Set("created", server.Created)
+	d.Set("key_name", server.KeyName)
+	d.Set("image_id", image.ID)
+	d.Set("image_name", image.Name)
+	d.Set("flavor_id", flavor.ID)
+	d.Set("flavor_name", flavor.Name)
 
-	return serverDetails, nil
+	addrs := make(map[string]string)
+	for pool, pool_info := range server.Addresses {
+		mac_name := fmt.Sprintf("%s_mac", pool)
+		ipv4_name := fmt.Sprintf("%s_ipv4", pool)
+		ipv6_name := fmt.Sprintf("%s_ipv6", pool)
+		p := pool_info.([]interface{})
+		for _, v := range p {
+			v2 := v.(map[string]interface{})
+			addrs[mac_name] = v2["OS-EXT-IPS-MAC:mac_addr"].(string)
+			if v2["version"] == 4.0 {
+				addrs[ipv4_name] = v2["addr"].(string)
+			} else if v2["version"] == 6.0 {
+				addrs[ipv6_name] = v2["addr"].(string)
+			}
+		}
+	}
+
+	d.Set("network_info", addrs)
+	log.Printf("addrs: %v", addrs)
+
+	return nil
 }
 
-func resourceComputeNetworksAdvanced(v interface{}) int {
+func resourceComputeNetwork(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
 	buf.WriteString(fmt.Sprintf("%s-", m["uuid"].(string)))

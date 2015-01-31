@@ -8,9 +8,9 @@ Only launching and destroying an instance in a `nova-network` based environment 
 
 ## Warning
 
-I have zero knowledge of Go. This work consisted of me reading the Go tutorial and fooling around for a few hours. If things look sloppy and outright wrong, they are.
+I have almost no knowledge of Go. This work consists of me copying copying other examples and being amazed that any of this actually works. If things look sloppy and outright wrong, they are.
 
-Also, please be aware that this is just me fooling around over a weekend. I will probably not take this plugin beyond the current state. If you'd like to take over work, by all means, go for it.
+Also, please be aware that this is just me fooling. If you'd like to take over work in a more serious manner, by all means, go for it.
 
 ## Installation
 
@@ -113,10 +113,10 @@ $ terraform destroy
 
 `admin_pass` is enabled, but I haven't verified it yet.
 
-`networks_advanced` is available for advanced networking configuration. One or more of the following can be specified:
+`network` is available for specific networking configuration. One or more of the following can be specified:
 
 ```
-networks_advanced {
+network {
   uuid: "94e12a2a-d692-4e6f-8e34-560e8a97ead5"
   # Not fully tested yet
   port: "(port uuid)"
