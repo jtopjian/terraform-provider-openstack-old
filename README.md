@@ -113,6 +113,19 @@ $ terraform destroy
 
 `admin_pass` is enabled, but I haven't verified it yet.
 
+`networks_advanced` is available for advanced networking configuration. One or more of the following can be specified:
+
+```
+networks_advanced {
+  uuid: "94e12a2a-d692-4e6f-8e34-560e8a97ead5"
+  # Not fully tested yet
+  port: "(port uuid)"
+  # Not fully tested yet
+  fixed_ip: "10.1.1.150"
+}
+```
+
+
 ## Credits
 
 * Eric / haklop for his initial [work](https://github.com/haklop/terraform)

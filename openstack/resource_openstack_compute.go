@@ -1,9 +1,11 @@
 package openstack
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -100,6 +102,33 @@ func resourceCompute() *schema.Resource {
 				},
 			},
 
+			"networks_advanced": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				ForceNew: true, // TODO handle update
+				Computed: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"uuid": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+							ForceNew: true,
+						},
+						"port": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+							ForceNew: true,
+						},
+						"fixed_ip": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+							ForceNew: true,
+						},
+					},
+				},
+				Set: resourceComputeNetworksAdvanced,
+			},
+
 			"metadata": &schema.Schema{
 				Type:     schema.TypeMap,
 				Optional: true,
@@ -170,10 +199,25 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	nets := d.Get("networks").(*schema.Set)
 	var networks []servers.Network
-	for _, v := range nets.List() {
-		networks = append(networks, servers.Network{UUID: v.(string)})
+	if v := d.Get("networks_advanced"); v != nil {
+		log.Printf("networks_advanced: %v", v)
+		vs := v.(*schema.Set).List()
+		if len(vs) > 0 {
+			for _, v := range vs {
+				net := v.(map[string]interface{})
+				networks = append(networks, servers.Network{
+					UUID:    net["uuid"].(string),
+					Port:    net["port"].(string),
+					FixedIP: net["fixed_ip"].(string),
+				})
+			}
+		}
+	} else {
+		nets := d.Get("networks").(*schema.Set)
+		for _, v := range nets.List() {
+			networks = append(networks, servers.Network{UUID: v.(string)})
+		}
 	}
 
 	secGroups := d.Get("security_groups").(*schema.Set)
@@ -495,4 +539,13 @@ func getServerDetails(client *gophercloud.ServiceClient, serverID string) (map[s
 	serverDetails["flavor_name"] = flavor.Name
 
 	return serverDetails, nil
+}
+
+func resourceComputeNetworksAdvanced(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+	buf.WriteString(fmt.Sprintf("%s-", m["uuid"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["port"].(string)))
+	buf.WriteString(fmt.Sprintf("%s-", m["fixed_ip"].(string)))
+	return hashcode.String(buf.String())
 }
