@@ -212,8 +212,8 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	var networks []servers.Network
-	if v := d.Get("network"); v != nil {
-		log.Printf("network: %v", v)
+	if v, ok := d.GetOk("network"); ok {
+		log.Printf("[INFO] network: %v", v)
 		vs := v.(*schema.Set).List()
 		if len(vs) > 0 {
 			for _, v := range vs {
@@ -228,6 +228,7 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 	} else {
 		nets := d.Get("networks").(*schema.Set)
 		for _, v := range nets.List() {
+			log.Printf("[INFO] network: %v", v)
 			networks = append(networks, servers.Network{UUID: v.(string)})
 		}
 	}
@@ -555,7 +556,7 @@ func setServerDetails(client *gophercloud.ServiceClient, serverID string, d *sch
 	}
 
 	d.Set("network_info", addrs)
-	log.Printf("addrs: %v", addrs)
+	log.Printf("[INFO] addrs: %v", addrs)
 
 	return nil
 }
