@@ -95,6 +95,11 @@ resource "openstack_compute" "test" {
     baz = "foo"
   }
 }
+
+resource "openstack_keypair" "mykey" {
+  name = "mykey"
+  public_key = "(contents of id_rsa.pub or similar)"
+}
 ```
 
 ### Launch
@@ -106,6 +111,8 @@ $ terraform destroy
 ```
 
 ## Notes
+
+### openstack_compute
 
 `image_id`, `flavor_ref`, and `networks` must be the UUIDs and not the canonical names. Also that the networks must be in array/list format.
 
@@ -132,6 +139,9 @@ network {
 }
 ```
 
+### openstack_keypair
+
+Only importing an existing key is supported. Generating a new key and downloading the private key is not supported yet.
 
 ## Credits
 
