@@ -47,7 +47,7 @@ You can authenticate with the OpenStack cloud by either explicitly setting param
 
 #### Explicit Parameters
 
-```
+```ruby
 provider "openstack" {
   identity_endpoint = "http://example.com:5000/v2.0"
   username = "jdoe"
@@ -66,17 +66,17 @@ $ source openrc
 
 Next, configure the provider in the `*.tf` file:
 
-```
+```ruby
 provier "openstack" { }
 ```
 
-For more information on OpenStack `openrc` files, see [http://docs.openstack.org/user-guide/content/cli_openrc.html].
+For more information on OpenStack `openrc` files, see [here](http://docs.openstack.org/user-guide/content/cli_openrc.html]).
 
 ### Terraform Configuration
 
 The following examples have been tested:
 
-```
+```ruby
 provider "openstack" {}
 
 resource "openstack_compute" "test" {
@@ -122,7 +122,7 @@ $ terraform destroy
 
 `network` is available to define network access at a more detailed level. You can specify one or more `network` blocks to attach your instance to one or more networks. The benefit of using this over `networks` is so you can specify an optional `port` or `fixed_ip`, whereas `networks` only takes a network UUID and will automatically configure the instance (usually DHCP).
 
-```
+```ruby
 network {
   uuid: "94e12a2a-d692-4e6f-8e34-560e8a97ead5"
   # Not fully tested yet
