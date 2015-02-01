@@ -209,7 +209,7 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	client, err := getClient(d, meta)
+	client, err := getComputeClient(d, meta)
 	if err != nil {
 		return err
 	}
@@ -370,7 +370,7 @@ func resourceComputeDelete(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	client, err := getClient(d, meta)
+	client, err := getComputeClient(d, meta)
 	if err != nil {
 		return err
 	}
@@ -398,7 +398,7 @@ func resourceComputeUpdate(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	client, err := getClient(d, meta)
+	client, err := getComputeClient(d, meta)
 	if err != nil {
 		return err
 	}
@@ -461,7 +461,7 @@ func resourceComputeRead(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	client, err := getClient(d, meta)
+	client, err := getComputeClient(d, meta)
 	if err != nil {
 		return err
 	}

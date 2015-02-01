@@ -50,7 +50,7 @@ func resourceKeypair() *schema.Resource {
 }
 
 func resourceKeypairCreate(d *schema.ResourceData, meta interface{}) error {
-	client, err := getClient(d, meta)
+	client, err := getComputeClient(d, meta)
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func resourceKeypairCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceKeypairRead(d *schema.ResourceData, meta interface{}) error {
-	client, err := getClient(d, meta)
+	client, err := getComputeClient(d, meta)
 	if err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func resourceKeypairRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceKeypairDelete(d *schema.ResourceData, meta interface{}) error {
-	client, err := getClient(d, meta)
+	client, err := getComputeClient(d, meta)
 	if err != nil {
 		return err
 	}

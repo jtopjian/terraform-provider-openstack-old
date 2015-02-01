@@ -117,7 +117,7 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	return config.NewClient()
 }
 
-func getClient(d *schema.ResourceData, meta interface{}) (*gophercloud.ServiceClient, error) {
+func getComputeClient(d *schema.ResourceData, meta interface{}) (*gophercloud.ServiceClient, error) {
 	provider := meta.(*gophercloud.ProviderClient)
 	client, err := openstack.NewComputeV2(provider, gophercloud.EndpointOpts{
 		Region: d.Get("region").(string),
