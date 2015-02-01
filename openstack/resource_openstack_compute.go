@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/rackspace/gophercloud"
-	"github.com/rackspace/gophercloud/openstack"
 	"github.com/rackspace/gophercloud/openstack/compute/v2/extensions/keypairs"
 	"github.com/rackspace/gophercloud/openstack/compute/v2/flavors"
 	"github.com/rackspace/gophercloud/openstack/compute/v2/images"
@@ -206,6 +205,10 @@ func resourceCompute() *schema.Resource {
 }
 
 func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
+	if err := checkParameters(d); err != nil {
+		return err
+	}
+
 	client, err := getClient(d, meta)
 	if err != nil {
 		return err
@@ -363,6 +366,10 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceComputeDelete(d *schema.ResourceData, meta interface{}) error {
+	if err := checkParameters(d); err != nil {
+		return err
+	}
+
 	client, err := getClient(d, meta)
 	if err != nil {
 		return err
@@ -387,6 +394,10 @@ func resourceComputeDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceComputeUpdate(d *schema.ResourceData, meta interface{}) error {
+	if err := checkParameters(d); err != nil {
+		return err
+	}
+
 	client, err := getClient(d, meta)
 	if err != nil {
 		return err
@@ -446,6 +457,10 @@ func resourceComputeUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceComputeRead(d *schema.ResourceData, meta interface{}) error {
+	if err := checkParameters(d); err != nil {
+		return err
+	}
+
 	client, err := getClient(d, meta)
 	if err != nil {
 		return err
@@ -468,24 +483,6 @@ func waitForServerState(client *gophercloud.ServiceClient, server *servers.Serve
 		return latest, latest.Status, nil
 
 	}
-}
-
-func getClient(d *schema.ResourceData, meta interface{}) (*gophercloud.ServiceClient, error) {
-	err := checkParameters(d)
-	if err := checkParameters(d); err != nil {
-		return nil, err
-	}
-
-	provider := meta.(*gophercloud.ProviderClient)
-	client, err := openstack.NewComputeV2(provider, gophercloud.EndpointOpts{
-		Region: d.Get("region").(string),
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return client, nil
 }
 
 func checkParameters(d *schema.ResourceData) error {

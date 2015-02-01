@@ -6,6 +6,8 @@ import (
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/rackspace/gophercloud"
+	"github.com/rackspace/gophercloud/openstack"
 )
 
 func Provider() terraform.ResourceProvider {
@@ -62,6 +64,7 @@ func Provider() terraform.ResourceProvider {
 
 		ResourcesMap: map[string]*schema.Resource{
 			"openstack_compute": resourceCompute(),
+			"openstack_keypair": resourceKeypair(),
 			//"openstack_network":         resourceNetwork(),
 			//"openstack_subnet":          resourceSubnet(),
 			//"openstack_router":          resourceRouter(),
@@ -112,4 +115,17 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	}
 
 	return config.NewClient()
+}
+
+func getClient(d *schema.ResourceData, meta interface{}) (*gophercloud.ServiceClient, error) {
+	provider := meta.(*gophercloud.ProviderClient)
+	client, err := openstack.NewComputeV2(provider, gophercloud.EndpointOpts{
+		Region: d.Get("region").(string),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return client, nil
 }
