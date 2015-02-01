@@ -67,7 +67,7 @@ $ source openrc
 Next, configure the provider in the `*.tf` file:
 
 ```ruby
-provier "openstack" { }
+provider "openstack" { }
 ```
 
 For more information on OpenStack `openrc` files, see [here](http://docs.openstack.org/user-guide/content/cli_openrc.html]).
