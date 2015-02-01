@@ -138,6 +138,7 @@ func resourceCompute() *schema.Resource {
 				Type:     schema.TypeMap,
 				Optional: true,
 				Computed: true,
+				Default:  nil,
 			},
 
 			// No idea how to do this yet.
@@ -269,8 +270,12 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 
 	metadata := make(map[string]string)
 	if m, ok := d.GetOk("metadata"); ok {
-		for k, v := range m.(map[string]interface{}) {
-			metadata[k] = v.(string)
+		if len(m.(map[string]interface{})) > 1 {
+			for k, v := range m.(map[string]interface{}) {
+				metadata[k] = v.(string)
+			}
+		} else {
+			metadata = nil
 		}
 	}
 
