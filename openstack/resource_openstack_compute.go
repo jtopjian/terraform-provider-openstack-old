@@ -297,13 +297,6 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	d.SetId(newServer.ID)
-
-	// get full info about the new server
-	if err := setServerDetails(client, newServer.ID, d); err != nil {
-		return err
-	}
-
 	stateConf := &resource.StateChangeConf{
 		Pending:    []string{"BUILD"},
 		Target:     "ACTIVE",
@@ -316,6 +309,12 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 	_, err = stateConf.WaitForState()
 
 	if err != nil {
+		return err
+	}
+
+	// get full info about the new server
+	d.SetId(newServer.ID)
+	if err := setServerDetails(client, newServer.ID, d); err != nil {
 		return err
 	}
 
