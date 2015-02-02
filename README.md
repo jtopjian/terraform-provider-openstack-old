@@ -2,10 +2,6 @@
 
 This is an experimental OpenStack provider for Terraform. It is based off of the excellent work already done by haklop which can be found [here](https://github.com/haklop/terraform). The main difference is that it works with the latest version of gophercloud and does not need to be compiled along with the entire Terraform code.
 
-However, it only supports the `openstack_compute` resource at this time. Even more, not all functionality (such as resizing) has been implemented or tested.
-
-Only launching and destroying an instance in a `nova-network` based environment has been tested so far.
-
 ## Warning
 
 I have almost no knowledge of Go. This work consists of me copying copying other examples and being amazed that any of this actually works. If things look sloppy and outright wrong, they are.
@@ -74,32 +70,36 @@ For more information on OpenStack `openrc` files, see [here](http://docs.opensta
 
 ### Terraform Configuration
 
-The following examples have been tested:
+This example does the following:
+
+* Imports a public key
+* Creates an instance and allows access via the imported key
+* Allocates a floating IP
+* Associates the floating IP to the new instance
 
 ```ruby
 provider "openstack" {}
-
-resource "openstack_compute" "test" {
-  name = "jttest"
-  image_id = "ecdd59d0-eff5-4d1b-be5e-dde94ffcfdb2"
-  # or image_name = "Ubuntu 14.04"
-  flavor_ref = "1"
-  # or flavor_name = "m1.large"
-  key_name = "my_key"
-  networks = [ "94e12a2a-d692-4e6f-8e34-560e8a97ead5" ]
-  security_groups = [ "default", "my_custom_group" ]
-  user_data = "#!/bin/bash\nping -c 10 yahoo.com"
-  config_drive = true
-  metadata {
-    foo = "bar"
-    baz = "foo"
-  }
-}
 
 resource "openstack_keypair" "mykey" {
   name = "mykey"
   public_key = "(contents of id_rsa.pub or similar)"
 }
+
+resource "openstack_compute" "test" {
+  name = "test"
+  image_name = "Ubuntu 14.04"
+  flavor_name = "m1.large"
+  key_name = "${openstack_keypair.mykey.name}"
+  networks = [ "94e12a2a-d692-4e6f-8e34-560e8a97ead5" ]
+  security_groups = [ "default", "my_custom_group" ]
+}
+
+resource "openstack_floating_ip" "test" {
+  pool = "nova"
+  network_service = "nova-network"
+  instance_id = "${openstack_compute.test.id}"
+}
+
 ```
 
 ### Launch
@@ -110,38 +110,56 @@ $ terraform build
 $ terraform destroy
 ```
 
-## Notes
+## Reference and Notes
 
 ### openstack_compute
 
-`image_id`, `flavor_ref`, and `networks` must be the UUIDs and not the canonical names. Also that the networks must be in array/list format.
+Modifications to launched instances hasn't been tested yet.
 
-`networks` is optional if your OpenStack cloud only has one network.
+* `name`: the name of the instance.
+* `image_id`: the UUID of the image.
+* `image_name`: the canonical name of the image.
+* `flavor_id`: the UUID of the flavor.
+* `flavor_name`: the canonical name of the flavor.
+* `key_name`: the ssh keypair name.
+* `networks`: an array of network UUIDs that the instance will be attached to.
+* `security_groups`: an array of security group names to apply to the instance.
+* `config_drive`: boolean to enable config drive.
+* `admin_pass`: a login password to the instance. NOT TESTED.
+* `metadata`: a set of key/value pairs to apply to the instance:
 
-`admin_pass` is enabled, but I haven't verified it yet.
+```ruby
+metadata {
+  foo = "bar"
+  baz =" foo"
+}
+```
 
-`network` is available to define network access at a more detailed level. You can specify one or more `network` blocks to attach your instance to one or more networks. The benefit of using this over `networks` is so you can specify an optional `port` or `fixed_ip`, whereas `networks` only takes a network UUID and will automatically configure the instance (usually DHCP).
+* `network`: configure a network with specific details. May be specified multiple times for multiple networks:
 
 ```ruby
 network {
-  uuid: "94e12a2a-d692-4e6f-8e34-560e8a97ead5"
-  # Not fully tested yet
-  # Optional, too
-  port: "(port uuid)"
-  # Not fully tested yet
-  # Optional, too
-  fixed_ip: "10.1.1.150"
-}
-
-network {
-  uuid: "e38c6290-97e5-4333-bd92-0f9ee792bd0f"
-  fixed_ip: "192.168.1.150"
+  UUID = "94e12a2a-d692-4e6f-8e34-560e8a97ead5"
+  port_id = "(neutron port-id)" # NOT TESTED
+  fixed_ip = "192.168.255.20" # NOT TESTED
 }
 ```
 
 ### openstack_keypair
 
 Only importing an existing key is supported. Generating a new key and downloading the private key is not supported yet.
+
+* `name`: the name of the keypair.
+* `public_key`: the contents of an `id_rsa.pub` or similar public key file.
+
+
+### openstack_floating_ip
+
+Only `nova-network`-based clouds work at this time.
+
+* `pool`: the floating IP pool to pull an address from.
+* `network_service`: Either `nova-network` or `neutron`.
+* `instance_id`: the UUID of the instance to associate the floating IP with.
 
 ## Credits
 
