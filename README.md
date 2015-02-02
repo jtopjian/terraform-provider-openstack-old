@@ -127,6 +127,7 @@ Modifications to launched instances hasn't been tested yet.
 * `config_drive`: boolean to enable config drive.
 * `admin_pass`: a login password to the instance. NOT TESTED.
 * `metadata`: a set of key/value pairs to apply to the instance:
+* `region`: Which region to , for multi-region clouds.
 
 ```ruby
 metadata {
@@ -151,6 +152,7 @@ Only importing an existing key is supported. Generating a new key and downloadin
 
 * `name`: the name of the keypair.
 * `public_key`: the contents of an `id_rsa.pub` or similar public key file.
+* `region`: Which region to send the key to, for multi-region clouds.
 
 
 ### openstack_floating_ip
@@ -160,6 +162,7 @@ Only `nova-network`-based clouds work at this time.
 * `pool`: the floating IP pool to pull an address from.
 * `network_service`: Either `nova-network` or `neutron`.
 * `instance_id`: the UUID of the instance to associate the floating IP with.
+* `region`: Which region to pull an IP from, for multi-region clouds.
 
 ## Credits
 
