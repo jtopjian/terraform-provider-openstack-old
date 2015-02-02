@@ -6,7 +6,7 @@ This is an experimental OpenStack provider for Terraform. It is based off of the
 
 I have almost no knowledge of Go. This work consists of me copying copying other examples and being amazed that any of this actually works. If things look sloppy and outright wrong, they are.
 
-Also, please be aware that this is just me fooling. If you'd like to take over work in a more serious manner, by all means, go for it.
+Also, please be aware that this is just a fun side project for me. If you'd like to take over work in a more serious manner, by all means, go for it.
 
 ## Installation
 
