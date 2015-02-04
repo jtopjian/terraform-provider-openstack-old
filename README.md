@@ -72,10 +72,11 @@ For more information on OpenStack `openrc` files, see [here](http://docs.opensta
 
 This example does the following:
 
-* Imports a public key
-* Creates an instance and allows access via the imported key
-* Allocates a floating IP
-* Associates the floating IP to the new instance
+* Creates a security group that allows SSH access from anywhere.
+* Imports a public key.
+* Creates an instance and allows access via the imported key.
+* Allocates a floating IP.
+* Associates the floating IP to the new instance.
 
 ```ruby
 provider "openstack" {}
