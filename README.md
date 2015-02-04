@@ -80,6 +80,18 @@ This example does the following:
 ```ruby
 provider "openstack" {}
 
+resource "openstack_secgroup" "test" {
+  name = "MyTestGroup"
+  description = "Testing"
+
+  rule {
+    protocol = "tcp"
+    from_port = "22"
+    to_port = "22"
+    cidr = "0.0.0.0/0"
+  }
+}
+
 resource "openstack_keypair" "mykey" {
   name = "mykey"
   public_key = "(contents of id_rsa.pub or similar)"
@@ -91,7 +103,7 @@ resource "openstack_compute" "test" {
   flavor_name = "m1.large"
   key_name = "${openstack_keypair.mykey.name}"
   networks = [ "94e12a2a-d692-4e6f-8e34-560e8a97ead5" ]
-  security_groups = [ "default", "my_custom_group" ]
+  security_groups = [ "default", "${openstack_secgroup.test.name}" ]
 }
 
 resource "openstack_floating_ip" "test" {
@@ -114,9 +126,15 @@ $ terraform destroy
 
 ### openstack_compute
 
-Modifications to launched instances hasn't been tested yet.
+#### Notes:
 
-* `name`: the name of the instance.
+* Modifications to launched instances hasn't been tested yet.
+* Either an `image_id` or an `image_name` is required.
+* Either a `flavor_id` or a `flavor_name` is required.
+
+#### Parameters
+
+* `name`: the name of the instance. Required.
 * `image_id`: the UUID of the image.
 * `image_name`: the canonical name of the image.
 * `flavor_id`: the UUID of the flavor.
@@ -148,21 +166,46 @@ network {
 
 ### openstack_keypair
 
-Only importing an existing key is supported. Generating a new key and downloading the private key is not supported yet.
+#### Notes
 
-* `name`: the name of the keypair.
-* `public_key`: the contents of an `id_rsa.pub` or similar public key file.
+* Only importing an existing key is supported. Generating a new key and downloading the private key is not supported yet.
+
+#### Parameters
+
+* `name`: the name of the keypair. Required.
+* `public_key`: the contents of an `id_rsa.pub` or similar public key file. Required.
 * `region`: Which region to send the key to, for multi-region clouds.
 
 
 ### openstack_floating_ip
 
-Only `nova-network`-based clouds work at this time.
+#### Notes
 
-* `pool`: the floating IP pool to pull an address from.
-* `network_service`: Either `nova-network` or `neutron`.
+* Only `nova-network`-based clouds work at this time.
+
+#### Parameters
+
+* `pool`: the floating IP pool to pull an address from. Required.
+* `network_service`: Either `nova-network` or `neutron`. Defaults to Neutron.
 * `instance_id`: the UUID of the instance to associate the floating IP with.
 * `region`: Which region to pull an IP from, for multi-region clouds.
+
+### openstack_secgroup
+
+#### Notes
+
+* Either a `cidr` or `source_group` is required for each rule.
+
+#### Parameters
+
+* `name`: the name of the security group. Required.
+* `description`: a description of the security group. Required.
+* `rule`: One or more rule blocks consisting of the following:
+  * `from_port`: Beginning of a port range. Required.
+  * `to_port`: End of a port range. Required.
+  * `protocol`: A protocol such as tcp, udp, icmp, etc. Required.
+  * `cidr`: A network cidr to grant access. `0.0.0.0/0` for all IPv4 addresses and `::/0` for all IPv6 addresses.
+  * `source_group`: Use another security group as the allowed access list.
 
 ## Credits
 
