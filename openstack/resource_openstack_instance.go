@@ -19,12 +19,12 @@ import (
 	"github.com/rackspace/gophercloud/openstack/compute/v2/servers"
 )
 
-func resourceCompute() *schema.Resource {
+func resourceInstance() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceComputeCreate,
-		Read:   resourceComputeRead,
-		Update: resourceComputeUpdate,
-		Delete: resourceComputeDelete,
+		Create: resourceInstanceCreate,
+		Read:   resourceInstanceRead,
+		Update: resourceInstanceUpdate,
+		Delete: resourceInstanceDelete,
 
 		Schema: map[string]*schema.Schema{
 			"name": &schema.Schema{
@@ -90,13 +90,6 @@ func resourceCompute() *schema.Resource {
 				ForceNew: true,
 			},
 
-			"network_provider": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
-				Default:  "neutron",
-			},
-
 			"networks": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -131,7 +124,7 @@ func resourceCompute() *schema.Resource {
 						},
 					},
 				},
-				Set: resourceComputeNetwork,
+				Set: resourceInstanceNetwork,
 			},
 
 			"metadata": &schema.Schema{
@@ -172,18 +165,6 @@ func resourceCompute() *schema.Resource {
 				Computed: true,
 			},
 
-			// defined in haklop's network extensions
-			// Neutron only, I think
-			"floating_ip_pool": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-			},
-
-			"floating_ip": &schema.Schema{
-				Type:     schema.TypeString,
-				Computed: true,
-			},
-
 			// read-only
 			"created": &schema.Schema{
 				Type:     schema.TypeString,
@@ -205,7 +186,7 @@ func resourceCompute() *schema.Resource {
 	}
 }
 
-func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceInstanceCreate(d *schema.ResourceData, meta interface{}) error {
 	if err := checkParameters(d); err != nil {
 		return err
 	}
@@ -369,7 +350,7 @@ func resourceComputeCreate(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceComputeDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceInstanceDelete(d *schema.ResourceData, meta interface{}) error {
 	if err := checkParameters(d); err != nil {
 		return err
 	}
@@ -397,7 +378,7 @@ func resourceComputeDelete(d *schema.ResourceData, meta interface{}) error {
 	return err
 }
 
-func resourceComputeUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
 	if err := checkParameters(d); err != nil {
 		return err
 	}
@@ -460,7 +441,7 @@ func resourceComputeUpdate(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceComputeRead(d *schema.ResourceData, meta interface{}) error {
+func resourceInstanceRead(d *schema.ResourceData, meta interface{}) error {
 	if err := checkParameters(d); err != nil {
 		return err
 	}
@@ -562,7 +543,7 @@ func setServerDetails(client *gophercloud.ServiceClient, serverID string, d *sch
 	return nil
 }
 
-func resourceComputeNetwork(v interface{}) int {
+func resourceInstanceNetwork(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
 	buf.WriteString(fmt.Sprintf("%s-", m["uuid"].(string)))

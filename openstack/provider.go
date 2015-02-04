@@ -63,9 +63,10 @@ func Provider() terraform.ResourceProvider {
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
-			"openstack_compute":     resourceCompute(),
+			"openstack_instance":    resourceInstance(),
 			"openstack_keypair":     resourceKeypair(),
 			"openstack_floating_ip": resourceFloatingIP(),
+			"openstack_secgroup":    resourceSecgroup(),
 			//"openstack_network":         resourceNetwork(),
 			//"openstack_subnet":          resourceSubnet(),
 			//"openstack_router":          resourceRouter(),

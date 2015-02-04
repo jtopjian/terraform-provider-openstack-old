@@ -98,7 +98,7 @@ resource "openstack_keypair" "mykey" {
   public_key = "(contents of id_rsa.pub or similar)"
 }
 
-resource "openstack_compute" "test" {
+resource "openstack_instance" "test" {
   name = "test"
   image_name = "Ubuntu 14.04"
   flavor_name = "m1.large"
@@ -110,7 +110,7 @@ resource "openstack_compute" "test" {
 resource "openstack_floating_ip" "test" {
   pool = "nova"
   network_service = "nova-network"
-  instance_id = "${openstack_compute.test.id}"
+  instance_id = "${openstack_instance.test.id}"
 }
 
 ```
@@ -125,7 +125,7 @@ $ terraform destroy
 
 ## Reference and Notes
 
-### openstack_compute
+### openstack_instance
 
 #### Notes:
 
