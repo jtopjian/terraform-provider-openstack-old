@@ -68,61 +68,10 @@ provider "openstack" { }
 
 For more information on OpenStack `openrc` files, see [here](http://docs.openstack.org/user-guide/content/cli_openrc.html]).
 
-### Terraform Configuration
+### Examples
 
-This example does the following:
+See the [examples](examples) directory.
 
-* Creates a security group that allows SSH access from anywhere.
-* Imports a public key.
-* Creates an instance and allows access via the imported key.
-* Allocates a floating IP.
-* Associates the floating IP to the new instance.
-
-```ruby
-provider "openstack" {}
-
-resource "openstack_secgroup" "test" {
-  name = "MyTestGroup"
-  description = "Testing"
-
-  rule {
-    protocol = "tcp"
-    from_port = "22"
-    to_port = "22"
-    cidr = "0.0.0.0/0"
-  }
-}
-
-resource "openstack_keypair" "mykey" {
-  name = "mykey"
-  public_key = "(contents of id_rsa.pub or similar)"
-}
-
-resource "openstack_instance" "test" {
-  name = "test"
-  image_name = "Ubuntu 14.04"
-  flavor_name = "m1.large"
-  key_name = "${openstack_keypair.mykey.name}"
-  networks = [ "94e12a2a-d692-4e6f-8e34-560e8a97ead5" ]
-  security_groups = [ "default", "${openstack_secgroup.test.name}" ]
-}
-
-resource "openstack_floating_ip" "test" {
-  pool = "nova"
-  network_service = "nova-network"
-  instance_id = "${openstack_instance.test.id}"
-}
-
-resource "openstack_volume" "myvol" {
-  name = "myvol"
-  size = 10
-
-  attach {
-    instance_id = "${openstack_instance.test.id}"
-  }
-}
-
-```
 
 ### Launch
 
