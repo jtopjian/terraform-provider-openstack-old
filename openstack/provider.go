@@ -67,6 +67,7 @@ func Provider() terraform.ResourceProvider {
 			"openstack_keypair":     resourceKeypair(),
 			"openstack_floating_ip": resourceFloatingIP(),
 			"openstack_secgroup":    resourceSecgroup(),
+			"openstack_volume":      resourceVolume(),
 			//"openstack_network":         resourceNetwork(),
 			//"openstack_subnet":          resourceSubnet(),
 			//"openstack_router":          resourceRouter(),
@@ -122,6 +123,19 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 func getComputeClient(d *schema.ResourceData, meta interface{}) (*gophercloud.ServiceClient, error) {
 	provider := meta.(*gophercloud.ProviderClient)
 	client, err := openstack.NewComputeV2(provider, gophercloud.EndpointOpts{
+		Region: d.Get("region").(string),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return client, nil
+}
+
+func getBlockStorageClient(d *schema.ResourceData, meta interface{}) (*gophercloud.ServiceClient, error) {
+	provider := meta.(*gophercloud.ProviderClient)
+	client, err := openstack.NewBlockStorageV1(provider, gophercloud.EndpointOpts{
 		Region: d.Get("region").(string),
 	})
 

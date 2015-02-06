@@ -113,6 +113,15 @@ resource "openstack_floating_ip" "test" {
   instance_id = "${openstack_instance.test.id}"
 }
 
+resource "openstack_volume" "myvol" {
+  name = "myvol"
+  size = 10
+
+  attach {
+    instance_id = "${openstack_instance.test.id}"
+  }
+}
+
 ```
 
 ### Launch
@@ -207,6 +216,26 @@ network {
   * `protocol`: A protocol such as tcp, udp, icmp, etc. Required.
   * `cidr`: A network cidr to grant access. `0.0.0.0/0` for all IPv4 addresses and `::/0` for all IPv6 addresses.
   * `source_group`: Use another security group as the allowed access list.
+* `region`: Which region to create the security group, for multi-region clouds.
+
+### openstack_volume
+
+#### Parameters
+
+* `name`: The name of the volume. Required.
+* `description`: A description of the volume.
+* `size`: The size of the volume in gigabytes.
+* `volume_type`: The volume type of the volume. NOT TESTED.
+* `availableility_zone`: The AZ of the volume. NOT TESTED.
+* `snapshot_id`: The snapshot ID to base the volume on. NOT TESTED.
+* `source_volume_id`: The volume ID to base the volume on. NOT TESTED.
+* `image_id`: The image ID to base the volume on. NOT TESTED.
+* `image_name`: The name of the image to base the volume on. NOT TESTED.
+* `metadata`: Metadata for the volume. NOT TESTED.
+* `attach`: Attach this volume to an instance. The API supports attachment to multiple instances, but most Cinder backends don't yet.
+  * `instance_id`: The ID of the instance to attach to.
+  * `device`: The device name to attach to, such as `/dev/vdc`. Leave blank for "auto".
+* `region`: Which region to create the volume in, for multi-region clouds.
 
 ## Credits
 
