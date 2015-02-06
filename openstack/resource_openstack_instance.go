@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/racker/perigee"
 	"github.com/rackspace/gophercloud"
 	"github.com/rackspace/gophercloud/openstack/compute/v2/extensions/keypairs"
 	"github.com/rackspace/gophercloud/openstack/compute/v2/flavors"
@@ -366,7 +367,7 @@ func resourceInstanceDelete(d *schema.ResourceData, meta interface{}) error {
 
 	stateConf := &resource.StateChangeConf{
 		Pending:    []string{"ACTIVE", "ERROR"},
-		Target:     "",
+		Target:     "DELETED",
 		Refresh:    waitForServerState(client, server),
 		Timeout:    30 * time.Minute,
 		Delay:      10 * time.Second,
@@ -462,6 +463,10 @@ func waitForServerState(client *gophercloud.ServiceClient, server *servers.Serve
 	return func() (interface{}, string, error) {
 		latest, err := servers.Get(client, server.ID).Extract()
 		if err != nil {
+			httpStatus := err.(*perigee.UnexpectedResponseCodeError)
+			if httpStatus.Actual == 404 {
+				return "", "DELETED", nil
+			}
 			return nil, "", err
 		}
 
@@ -532,7 +537,7 @@ func setServerDetails(client *gophercloud.ServiceClient, serverID string, d *sch
 			if v2["version"] == 4.0 {
 				addrs[ipv4_name] = v2["addr"].(string)
 			} else if v2["version"] == 6.0 {
-				addrs[ipv6_name] = v2["addr"].(string)
+				addrs[ipv6_name] = fmt.Sprintf("[%s]", v2["addr"].(string))
 			}
 		}
 	}
