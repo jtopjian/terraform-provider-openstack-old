@@ -12,6 +12,7 @@ import (
 	"github.com/racker/perigee"
 	"github.com/rackspace/gophercloud"
 	"github.com/rackspace/gophercloud/openstack/blockstorage/v1/volumes"
+	"github.com/rackspace/gophercloud/openstack/compute/v2/extensions/volumeattach"
 )
 
 func resourceVolume() *schema.Resource {
@@ -227,7 +228,12 @@ func resourceVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 				instanceId := va["instance_id"].(string)
 				device := va["device"].(string)
 
-				if _, err := createVolumeAttachment(computeClient, instanceId, d.Id(), device); err != nil {
+				vaOpts := &volumeattach.CreateOpts{
+					Device:   device,
+					ServerID: instanceId,
+					VolumeID: newVolume.ID,
+				}
+				if _, err := volumeattach.Create(computeClient, instanceId, vaOpts).Extract(); err != nil {
 					return err
 				}
 			}
@@ -293,7 +299,7 @@ func resourceVolumeUpdate(d *schema.ResourceData, meta interface{}) error {
 
 				instanceId := va["instance_id"].(string)
 
-				if err := deleteVolumeAttachment(computeClient, instanceId, d.Id()); err != nil {
+				if err := volumeattach.Delete(computeClient, instanceId, d.Id()).ExtractErr(); err != nil {
 					return err
 				}
 			}
@@ -330,7 +336,12 @@ func resourceVolumeUpdate(d *schema.ResourceData, meta interface{}) error {
 				instanceId := va["instance_id"].(string)
 				device := va["device"].(string)
 
-				if _, err := createVolumeAttachment(computeClient, instanceId, d.Id(), device); err != nil {
+				vaOpts := &volumeattach.CreateOpts{
+					Device:   device,
+					ServerID: instanceId,
+					VolumeID: d.Id(),
+				}
+				if _, err := volumeattach.Create(computeClient, instanceId, vaOpts).Extract(); err != nil {
 					return err
 				}
 			}
