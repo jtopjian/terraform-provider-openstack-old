@@ -8,6 +8,10 @@ import (
 	"github.com/hashicorp/terraform/terraform"
 )
 
+var (
+	OS_REGION_NAME = ""
+)
+
 var testAccProviders map[string]terraform.ResourceProvider
 var testAccProvider *schema.Provider
 
@@ -45,11 +49,14 @@ func testAccPreCheck(t *testing.T) {
 		t.Fatal("OS_TENANT_ID must be set for acceptance tests.")
 	}
 
-	if v := os.Getenv("OS_AT_DEFAULT_IMAGE_REF"); v == "" {
-		t.Fatal("OS_AT_DEFAULT_IMAGE_REF must be set for acceptance tests.")
+	if v := os.Getenv("OS_IMAGE_ID"); v == "" {
+		t.Fatal("OS_IMAGE_ID must be set for acceptance tests.")
 	}
 
-	if v := os.Getenv("OS_AT_DEFAULT_FLAVOR_REF"); v == "" {
-		t.Fatal("OS_AT_DEFAULT_IMAGE_REF must be set for acceptance tests.")
+	if v := os.Getenv("OS_FLAVOR_ID"); v == "" {
+		t.Fatal("OS_FLAVOR_ID must be set for acceptance tests.")
 	}
+
+	OS_REGION_NAME = os.Getenv("OS_REGION_NAME")
+
 }

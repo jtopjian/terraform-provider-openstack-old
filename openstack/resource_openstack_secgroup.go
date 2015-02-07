@@ -56,29 +56,23 @@ func resourceSecgroup() *schema.Resource {
 						"from_port": &schema.Schema{
 							Type:     schema.TypeInt,
 							Required: true,
-							Computed: true,
 						},
 						"to_port": &schema.Schema{
 							Type:     schema.TypeInt,
 							Required: true,
-							Computed: true,
 						},
 						"protocol": &schema.Schema{
 							Type:     schema.TypeString,
 							Required: true,
-							Computed: true,
 						},
 						"cidr": &schema.Schema{
 							Type:     schema.TypeString,
 							Required: true,
-							Computed: true,
-							Default:  "",
 						},
 						"source_group": &schema.Schema{
 							Type:     schema.TypeString,
 							Optional: true,
 							Computed: true,
-							Default:  "",
 						},
 						"parent_group_id": &schema.Schema{
 							Type:     schema.TypeString,
