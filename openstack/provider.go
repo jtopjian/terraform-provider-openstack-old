@@ -2,16 +2,10 @@ package openstack
 
 import (
 	"errors"
-	"fmt"
 	"os"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
-	"github.com/rackspace/gophercloud"
-	"github.com/rackspace/gophercloud/openstack"
-	"github.com/rackspace/gophercloud/openstack/compute/v2/flavors"
-	"github.com/rackspace/gophercloud/openstack/compute/v2/images"
-	"github.com/rackspace/gophercloud/pagination"
 )
 
 func Provider() terraform.ResourceProvider {
@@ -72,17 +66,9 @@ func Provider() terraform.ResourceProvider {
 			"openstack_floating_ip": resourceFloatingIP(),
 			"openstack_secgroup":    resourceSecgroup(),
 			"openstack_volume":      resourceVolume(),
-			//"openstack_network":         resourceNetwork(),
-			//"openstack_subnet":          resourceSubnet(),
-			//"openstack_router":          resourceRouter(),
-			//"openstack_security_group":  resourceSecurityGroup(),
-			//"openstack_lbaas":           resourceLBaaS(),
-			//"openstack_firewall":        resourceFirewall(),
-			//"openstack_firewall_policy": resourceFirewallPolicy(),
-			//"openstack_firewall_rule":   resourceFirewallRule(),
 		},
 
-		ConfigureFunc: providerConfigure,
+		ConfigureFunc: configureProvider,
 	}
 }
 
@@ -96,7 +82,7 @@ func envDefaultFunc(k string) schema.SchemaDefaultFunc {
 	}
 }
 
-func providerConfigure(d *schema.ResourceData) (interface{}, error) {
+func configureProvider(d *schema.ResourceData) (interface{}, error) {
 
 	user_id := d.Get("user_id").(string)
 	username := d.Get("username").(string)
@@ -121,109 +107,9 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		DomainName:       d.Get("domain_name").(string),
 	}
 
-	return config.NewClient()
-}
-
-func getComputeClient(d *schema.ResourceData, meta interface{}) (*gophercloud.ServiceClient, error) {
-	provider := meta.(*gophercloud.ProviderClient)
-	client, err := openstack.NewComputeV2(provider, gophercloud.EndpointOpts{
-		Region: d.Get("region").(string),
-	})
-
-	if err != nil {
+	if err := config.NewClient(); err != nil {
 		return nil, err
 	}
 
-	return client, nil
-}
-
-func getBlockStorageClient(d *schema.ResourceData, meta interface{}) (*gophercloud.ServiceClient, error) {
-	provider := meta.(*gophercloud.ProviderClient)
-	client, err := openstack.NewBlockStorageV1(provider, gophercloud.EndpointOpts{
-		Region: d.Get("region").(string),
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return client, nil
-}
-
-// helper functions
-
-// images
-func getImageID(client *gophercloud.ServiceClient, d *schema.ResourceData) (string, error) {
-	imageID := d.Get("image_id").(string)
-	imageName := d.Get("image_name").(string)
-	if imageID == "" {
-		pager := images.ListDetail(client, nil)
-
-		pager.EachPage(func(page pagination.Page) (bool, error) {
-			imageList, err := images.ExtractImages(page)
-
-			if err != nil {
-				return false, err
-			}
-
-			for _, i := range imageList {
-				if i.Name == imageName {
-					imageID = i.ID
-				}
-			}
-			return true, nil
-		})
-
-		if imageID == "" {
-			return "", fmt.Errorf("Unable to find image: %v", imageName)
-		}
-	}
-
-	if imageID == "" && imageName == "" {
-		return "", fmt.Errorf("Neither an image ID nor an image name were able to be determined.")
-	}
-
-	return imageID, nil
-}
-
-func getImage(client *gophercloud.ServiceClient, imageId string) (*images.Image, error) {
-	return images.Get(client, imageId).Extract()
-}
-
-// flavors
-func getFlavorID(client *gophercloud.ServiceClient, d *schema.ResourceData) (string, error) {
-	flavorID := d.Get("flavor_id").(string)
-	flavorName := d.Get("flavor_name").(string)
-	if flavorID == "" {
-		pager := flavors.ListDetail(client, nil)
-
-		pager.EachPage(func(page pagination.Page) (bool, error) {
-			flavorList, err := flavors.ExtractFlavors(page)
-
-			if err != nil {
-				return false, err
-			}
-
-			for _, f := range flavorList {
-				if f.Name == flavorName {
-					flavorID = f.ID
-				}
-			}
-			return true, nil
-		})
-
-		if flavorID == "" {
-			return "", fmt.Errorf("Unable to find flavor: %v", flavorName)
-		}
-	}
-
-	if flavorID == "" && flavorName == "" {
-		return "", fmt.Errorf("Neither a flavor ID nor a flavor name were able to be determined.")
-	}
-
-	return flavorID, nil
-}
-
-func getFlavor(client *gophercloud.ServiceClient, flavorId string) (*flavors.Flavor, error) {
-	return flavors.Get(client, flavorId).Extract()
+	return &config, nil
 }

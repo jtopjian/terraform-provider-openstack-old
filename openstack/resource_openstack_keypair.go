@@ -16,6 +16,19 @@ func resourceKeypair() *schema.Resource {
 		Delete: resourceKeypairDelete,
 
 		Schema: map[string]*schema.Schema{
+			"region": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+			},
+
+			"api_version": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+				Default:  "2",
+			},
+
 			"name": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
@@ -24,14 +37,6 @@ func resourceKeypair() *schema.Resource {
 			"public_key": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
-			},
-
-			// Region is defined per-instance due to how gophercloud
-			// handles the region -- not until a provider is returned.
-			"region": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
 			},
 
 			// read-only / exported
@@ -50,7 +55,7 @@ func resourceKeypair() *schema.Resource {
 }
 
 func resourceKeypairCreate(d *schema.ResourceData, meta interface{}) error {
-	client, err := getComputeClient(d, meta)
+	client, err := getClient("compute", d, meta)
 	if err != nil {
 		return err
 	}
@@ -78,7 +83,7 @@ func resourceKeypairCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceKeypairRead(d *schema.ResourceData, meta interface{}) error {
-	client, err := getComputeClient(d, meta)
+	client, err := getClient("compute", d, meta)
 	if err != nil {
 		return err
 	}
@@ -91,7 +96,7 @@ func resourceKeypairRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceKeypairDelete(d *schema.ResourceData, meta interface{}) error {
-	client, err := getComputeClient(d, meta)
+	client, err := getClient("compute", d, meta)
 	if err != nil {
 		return err
 	}

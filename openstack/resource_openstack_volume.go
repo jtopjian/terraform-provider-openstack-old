@@ -23,6 +23,19 @@ func resourceVolume() *schema.Resource {
 		Delete: resourceVolumeDelete,
 
 		Schema: map[string]*schema.Schema{
+			"region": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+			},
+
+			"api_version": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+				Default:  "1",
+			},
+
 			"name": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
@@ -89,14 +102,6 @@ func resourceVolume() *schema.Resource {
 				Default:  nil,
 			},
 
-			// Region is defined per-instance due to how gophercloud
-			// handles the region -- not until a provider is returned.
-			"region": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
-			},
-
 			// read-only / exported
 			"id": &schema.Schema{
 				Type:     schema.TypeString,
@@ -152,7 +157,7 @@ func resourceVolume() *schema.Resource {
 }
 
 func resourceVolumeCreate(d *schema.ResourceData, meta interface{}) error {
-	client, err := getBlockStorageClient(d, meta)
+	client, err := getClient("block", d, meta)
 	if err != nil {
 		return err
 	}
@@ -214,7 +219,7 @@ func resourceVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 	if v := d.Get("attach"); v != nil {
 		vs := v.(*schema.Set).List()
 		if len(vs) > 0 {
-			computeClient, err := getComputeClient(d, meta)
+			computeClient, err := getClient("compute", d, meta)
 			if err != nil {
 				return err
 			}
@@ -261,7 +266,7 @@ func resourceVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceVolumeRead(d *schema.ResourceData, meta interface{}) error {
-	client, err := getBlockStorageClient(d, meta)
+	client, err := getClient("block", d, meta)
 	if err != nil {
 		return err
 	}
@@ -274,7 +279,7 @@ func resourceVolumeRead(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceVolumeUpdate(d *schema.ResourceData, meta interface{}) error {
-	client, err := getBlockStorageClient(d, meta)
+	client, err := getClient("block", d, meta)
 	if err != nil {
 		return err
 	}
@@ -283,7 +288,7 @@ func resourceVolumeUpdate(d *schema.ResourceData, meta interface{}) error {
 		oa, na := d.GetChange("attach")
 		oas := oa.(*schema.Set).List()
 		if len(oas) > 0 {
-			computeClient, err := getComputeClient(d, meta)
+			computeClient, err := getClient("compute", d, meta)
 			if err != nil {
 				return err
 			}
@@ -320,7 +325,7 @@ func resourceVolumeUpdate(d *schema.ResourceData, meta interface{}) error {
 
 		nas := na.(*schema.Set).List()
 		if len(nas) > 0 {
-			computeClient, err := getComputeClient(d, meta)
+			computeClient, err := getClient("compute", d, meta)
 			if err != nil {
 				return err
 			}
@@ -367,7 +372,7 @@ func resourceVolumeUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceVolumeDelete(d *schema.ResourceData, meta interface{}) error {
-	client, err := getBlockStorageClient(d, meta)
+	client, err := getClient("block", d, meta)
 	if err != nil {
 		return err
 	}
@@ -377,7 +382,7 @@ func resourceVolumeDelete(d *schema.ResourceData, meta interface{}) error {
 	if v := d.Get("attach"); v != nil {
 		vs := v.(*schema.Set).List()
 		if len(vs) > 0 {
-			computeClient, err := getComputeClient(d, meta)
+			computeClient, err := getClient("compute", d, meta)
 			if err != nil {
 				return err
 			}

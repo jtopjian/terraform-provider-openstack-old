@@ -1,8 +1,10 @@
 package openstack
 
 import (
+	"fmt"
 	"log"
 
+	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/rackspace/gophercloud"
 	"github.com/rackspace/gophercloud/openstack"
 )
@@ -16,14 +18,11 @@ type Config struct {
 	TenantName       string
 	DomainID         string
 	DomainName       string
-	//Region           string
 
-	//ProviderClient   gophercloud.ProviderClient
+	osClient *gophercloud.ProviderClient
 }
 
-// Client() returns a new client for accessing openstack.
-//
-func (c *Config) NewClient() (*gophercloud.ProviderClient, error) {
+func (c *Config) NewClient() error {
 
 	opts := gophercloud.AuthOptions{
 		IdentityEndpoint: c.IdentityEndpoint,
@@ -36,35 +35,69 @@ func (c *Config) NewClient() (*gophercloud.ProviderClient, error) {
 		DomainName:       c.DomainName,
 	}
 
-	provider, err := openstack.AuthenticatedClient(opts)
-
+	client, err := openstack.AuthenticatedClient(opts)
 	if err != nil {
-		return nil, err
+		return err
 	}
+
+	c.osClient = client
 
 	log.Printf("[INFO] Openstack Client configured for user %s", c.Username)
 
-	//c.ProviderClient = provider
-	//return nil
-
-	return provider, nil
+	return nil
 }
 
-// Currently not used
-//func (p *Config) getClient() (gophercloud.ServiceClient, error) {
-//	return openstack.NewComputeV2(p.ProviderClient, gophercloud.EndpointOpts{
-//		Region: p.Region,
-//	})
-//}
+func getClient(clientType string, d *schema.ResourceData, meta interface{}) (*gophercloud.ServiceClient, error) {
+	config := meta.(*Config)
+	api_version := d.Get("api_version").(string)
+	region := d.Get("region").(string)
 
-// this needs updated
-//func (p *Config) getNetworkApi() (network.NetworkProvider, error) {
-//
-//	//access := p.AccessProvider.(*gophercloud.Access)
-//	access := p.ProviderClient.(*gophercloud.Access)
-//
-//	return network.NetworksApi(access, gophercloud.ApiCriteria{
-//		Name:      "neutron",
-//		UrlChoice: gophercloud.PublicURL,
-//	})
-//}
+	switch clientType {
+	case "block":
+		return config.blockStorageClient(region, api_version)
+	case "compute":
+		return config.computeClient(region, api_version)
+	case "network":
+		return config.networkingClient(region, api_version)
+	case "object":
+		return config.objectStorageClient(region, api_version)
+	}
+
+	return nil, fmt.Errorf("Invalid client request: %v", clientType)
+}
+
+func (c *Config) blockStorageClient(region, api_version string) (*gophercloud.ServiceClient, error) {
+	if api_version == "1" {
+		return openstack.NewBlockStorageV1(c.osClient, gophercloud.EndpointOpts{
+			Region: region,
+		})
+	}
+	return nil, fmt.Errorf("api version not supported: %v", api_version)
+}
+
+func (c *Config) computeClient(region, api_version string) (*gophercloud.ServiceClient, error) {
+	if api_version == "2" {
+		return openstack.NewComputeV2(c.osClient, gophercloud.EndpointOpts{
+			Region: region,
+		})
+	}
+	return nil, fmt.Errorf("api version not supported: %v", api_version)
+}
+
+func (c *Config) networkingClient(region, api_version string) (*gophercloud.ServiceClient, error) {
+	if api_version == "2" {
+		return openstack.NewNetworkV2(c.osClient, gophercloud.EndpointOpts{
+			Region: region,
+		})
+	}
+	return nil, fmt.Errorf("api version not supported: %v", api_version)
+}
+
+func (c *Config) objectStorageClient(region, api_version string) (*gophercloud.ServiceClient, error) {
+	if api_version == "1" {
+		return openstack.NewObjectStorageV1(c.osClient, gophercloud.EndpointOpts{
+			Region: region,
+		})
+	}
+	return nil, fmt.Errorf("api version not supported: %v", api_version)
+}

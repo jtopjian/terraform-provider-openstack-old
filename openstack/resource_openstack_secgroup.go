@@ -19,6 +19,19 @@ func resourceSecgroup() *schema.Resource {
 		Delete: resourceSecgroupDelete,
 
 		Schema: map[string]*schema.Schema{
+			"region": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+			},
+
+			"api_version": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+				Default:  "2",
+			},
+
 			"name": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
@@ -77,14 +90,6 @@ func resourceSecgroup() *schema.Resource {
 				Set: resourceSecgroupRuleHash,
 			},
 
-			// Region is defined per-instance due to how gophercloud
-			// handles the region -- not until a provider is returned.
-			"region": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
-			},
-
 			// read-only / exported
 			"id": &schema.Schema{
 				Type:     schema.TypeString,
@@ -101,7 +106,7 @@ func resourceSecgroup() *schema.Resource {
 }
 
 func resourceSecgroupCreate(d *schema.ResourceData, meta interface{}) error {
-	client, err := getComputeClient(d, meta)
+	client, err := getClient("compute", d, meta)
 	if err != nil {
 		return err
 	}
@@ -147,7 +152,7 @@ func resourceSecgroupCreate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceSecgroupRuleCreate(d *schema.ResourceData, meta interface{}, sgID string, rule map[string]interface{}) error {
-	client, err := getComputeClient(d, meta)
+	client, err := getClient("compute", d, meta)
 	if err != nil {
 		return err
 	}
@@ -179,7 +184,7 @@ func resourceSecgroupRuleCreate(d *schema.ResourceData, meta interface{}, sgID s
 }
 
 func resourceSecgroupRead(d *schema.ResourceData, meta interface{}) error {
-	client, err := getComputeClient(d, meta)
+	client, err := getClient("compute", d, meta)
 	if err != nil {
 		return err
 	}
@@ -224,7 +229,7 @@ func resourceSecgroupUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func resourceSecgroupDelete(d *schema.ResourceData, meta interface{}) error {
-	client, err := getComputeClient(d, meta)
+	client, err := getClient("compute", d, meta)
 	if err != nil {
 		return err
 	}
@@ -238,7 +243,7 @@ func resourceSecgroupDelete(d *schema.ResourceData, meta interface{}) error {
 
 func resourceSecgroupRuleDelete(d *schema.ResourceData, meta interface{}, sgID string, rule map[string]interface{}) error {
 
-	client, err := getComputeClient(d, meta)
+	client, err := getClient("compute", d, meta)
 	if err != nil {
 		return err
 	}

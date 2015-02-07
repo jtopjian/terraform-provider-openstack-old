@@ -32,6 +32,13 @@ func resourceInstance() *schema.Resource {
 				ForceNew: true,
 			},
 
+			"api_version": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+				Default:  "2",
+			},
+
 			"name": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
@@ -183,7 +190,7 @@ func resourceInstanceCreate(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	client, err := getComputeClient(d, meta)
+	client, err := getClient("compute", d, meta)
 	if err != nil {
 		return err
 	}
@@ -300,7 +307,7 @@ func resourceInstanceRead(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	client, err := getComputeClient(d, meta)
+	client, err := getClient("compute", d, meta)
 	if err != nil {
 		return err
 	}
@@ -317,7 +324,7 @@ func resourceInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	client, err := getComputeClient(d, meta)
+	client, err := getClient("compute", d, meta)
 	if err != nil {
 		return err
 	}
@@ -380,7 +387,7 @@ func resourceInstanceDelete(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	client, err := getComputeClient(d, meta)
+	client, err := getClient("compute", d, meta)
 	if err != nil {
 		return err
 	}

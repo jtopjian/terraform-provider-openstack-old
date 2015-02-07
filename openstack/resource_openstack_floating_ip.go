@@ -15,6 +15,19 @@ func resourceFloatingIP() *schema.Resource {
 		Delete: resourceFloatingIPDelete,
 
 		Schema: map[string]*schema.Schema{
+			"region": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+			},
+
+			"api_version": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+				Default:  "2",
+			},
+
 			"pool": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
@@ -30,14 +43,6 @@ func resourceFloatingIP() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				Computed: true,
-			},
-
-			// Region is defined per-instance due to how gophercloud
-			// handles the region -- not until a provider is returned.
-			"region": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
 			},
 
 			// network_service specifies which network provider to use
@@ -68,7 +73,7 @@ func resourceFloatingIP() *schema.Resource {
 func resourceFloatingIPCreate(d *schema.ResourceData, meta interface{}) error {
 	networkService := d.Get("network_service")
 	if networkService == "nova-network" {
-		client, err := getComputeClient(d, meta)
+		client, err := getClient("compute", d, meta)
 		if err != nil {
 			return err
 		}
@@ -97,7 +102,7 @@ func resourceFloatingIPCreate(d *schema.ResourceData, meta interface{}) error {
 func resourceFloatingIPRead(d *schema.ResourceData, meta interface{}) error {
 	networkService := d.Get("network_service")
 	if networkService == "nova-network" {
-		client, err := getComputeClient(d, meta)
+		client, err := getClient("compute", d, meta)
 		if err != nil {
 			return err
 		}
@@ -118,7 +123,7 @@ func resourceFloatingIPRead(d *schema.ResourceData, meta interface{}) error {
 func resourceFloatingIPUpdate(d *schema.ResourceData, meta interface{}) error {
 	networkService := d.Get("network_service")
 	if networkService == "nova-network" {
-		client, err := getComputeClient(d, meta)
+		client, err := getClient("compute", d, meta)
 		if err != nil {
 			return err
 		}
@@ -159,7 +164,7 @@ func resourceFloatingIPUpdate(d *schema.ResourceData, meta interface{}) error {
 func resourceFloatingIPDelete(d *schema.ResourceData, meta interface{}) error {
 	networkService := d.Get("network_service")
 	if networkService == "nova-network" {
-		client, err := getComputeClient(d, meta)
+		client, err := getClient("compute", d, meta)
 		if err != nil {
 			return err
 		}
