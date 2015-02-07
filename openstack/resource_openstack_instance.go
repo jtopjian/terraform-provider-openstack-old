@@ -15,8 +15,6 @@ import (
 	"github.com/racker/perigee"
 	"github.com/rackspace/gophercloud"
 	"github.com/rackspace/gophercloud/openstack/compute/v2/extensions/keypairs"
-	"github.com/rackspace/gophercloud/openstack/compute/v2/flavors"
-	"github.com/rackspace/gophercloud/openstack/compute/v2/images"
 	"github.com/rackspace/gophercloud/openstack/compute/v2/servers"
 )
 
@@ -28,6 +26,12 @@ func resourceInstance() *schema.Resource {
 		Delete: resourceInstanceDelete,
 
 		Schema: map[string]*schema.Schema{
+			"region": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+			},
+
 			"name": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
@@ -125,7 +129,7 @@ func resourceInstance() *schema.Resource {
 						},
 					},
 				},
-				Set: resourceInstanceNetwork,
+				Set: resourceInstanceNetworkHash,
 			},
 
 			"metadata": &schema.Schema{
@@ -134,10 +138,6 @@ func resourceInstance() *schema.Resource {
 				Computed: true,
 				Default:  nil,
 			},
-
-			// No idea how to do this yet.
-			//"personality": &schema.Schema{
-			//},
 
 			"config_drive": &schema.Schema{
 				Type:     schema.TypeBool,
@@ -150,19 +150,10 @@ func resourceInstance() *schema.Resource {
 				ForceNew: true,
 			},
 
-			// Region is defined per-instance due to how gophercloud
-			// handles the region -- not until a provider is returned.
-			"region": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
-			},
-
-			// defined in gophercloud compute extensions
 			"key_name": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
-				ForceNew: true, // TODO handle update
+				ForceNew: true,
 				Computed: true,
 			},
 
@@ -180,7 +171,7 @@ func resourceInstance() *schema.Resource {
 			"network_info": &schema.Schema{
 				Type:     schema.TypeMap,
 				Optional: true,
-				ForceNew: true, // TODO handle update
+				ForceNew: true,
 				Computed: true,
 			},
 		},
@@ -197,89 +188,42 @@ func resourceInstanceCreate(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	var networks []servers.Network
-	if v, ok := d.GetOk("network"); ok {
-		log.Printf("[INFO] network: %v", v)
-		vs := v.(*schema.Set).List()
-		if len(vs) > 0 {
-			for _, v := range vs {
-				net := v.(map[string]interface{})
-				networks = append(networks, servers.Network{
-					UUID:    net["uuid"].(string),
-					Port:    net["port"].(string),
-					FixedIP: net["fixed_ip"].(string),
-				})
-			}
-		}
-	} else {
-		nets := d.Get("networks").(*schema.Set)
-		for _, v := range nets.List() {
-			log.Printf("[INFO] network: %v", v)
-			networks = append(networks, servers.Network{UUID: v.(string)})
-		}
-	}
-
-	secGroups := d.Get("security_groups").(*schema.Set)
-	var securityGroups []string
-	for _, v := range secGroups.List() {
-		securityGroups = append(securityGroups, v.(string))
-	}
-
 	userData := []byte("")
 	if v := d.Get("user_data"); v != nil {
 		userData = []byte(v.(string))
 	}
 
-	// figure out the image
-	imageID := d.Get("image_id").(string)
-	if imageID == "" {
-		// image_name has to be set due to prior checking
-		// look up all accessible images and find a match
-		imageID, err = GetImageIDByName(client, d.Get("image_name").(string))
-		if err != nil {
-			return err
-		}
+	imageID, err := getImageID(client, d)
+	if err != nil {
+		return err
 	}
 
-	// figure out the flavor
-	flavorID := d.Get("flavor_id").(string)
-	if flavorID == "" {
-		flavorID, err = GetFlavorIDByName(client, d.Get("flavor_name").(string))
-		if err != nil {
-			return err
-		}
+	flavorID, err := getFlavorID(client, d)
+	if err != nil {
+		return err
 	}
 
-	metadata := make(map[string]string)
-	if m, ok := d.GetOk("metadata"); ok {
-		if len(m.(map[string]interface{})) > 1 {
-			for k, v := range m.(map[string]interface{}) {
-				metadata[k] = v.(string)
-			}
-		} else {
-			metadata = nil
-		}
-	}
-
-	baseOpts := &servers.CreateOpts{
+	var createOpts servers.CreateOptsBuilder
+	createOpts = &servers.CreateOpts{
 		Name:           d.Get("name").(string),
 		ImageRef:       imageID,
 		FlavorRef:      flavorID,
-		SecurityGroups: securityGroups,
-		Networks:       networks,
+		SecurityGroups: buildInstanceSecurityGroups(d),
+		Networks:       buildInstanceNetworks(d),
 		UserData:       userData,
 		AdminPass:      d.Get("admin_pass").(string),
 		ConfigDrive:    d.Get("config_drive").(bool),
-		Metadata:       metadata,
+		Metadata:       buildInstanceMetadata(d),
 	}
 
-	keyName := d.Get("key_name").(string)
-	keyOpts := keypairs.CreateOptsExt{
-		CreateOptsBuilder: baseOpts,
-		KeyName:           keyName,
+	if keyName, ok := d.Get("key_name").(string); ok && keyName != "" {
+		createOpts = &keypairs.CreateOptsExt{
+			createOpts,
+			keyName,
+		}
 	}
 
-	newServer, err := servers.Create(client, keyOpts).Extract()
+	newServer, err := servers.Create(client, createOpts).Extract()
 	if err != nil {
 		return err
 	}
@@ -351,7 +295,7 @@ func resourceInstanceCreate(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceInstanceDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceInstanceRead(d *schema.ResourceData, meta interface{}) error {
 	if err := checkParameters(d); err != nil {
 		return err
 	}
@@ -361,22 +305,11 @@ func resourceInstanceDelete(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	server, _ := servers.Get(client, d.Id()).Extract()
-
-	servers.Delete(client, server.ID)
-
-	stateConf := &resource.StateChangeConf{
-		Pending:    []string{"ACTIVE", "ERROR"},
-		Target:     "DELETED",
-		Refresh:    waitForServerState(client, server),
-		Timeout:    30 * time.Minute,
-		Delay:      10 * time.Second,
-		MinTimeout: 3 * time.Second,
+	if err := setServerDetails(client, d.Id(), d); err != nil {
+		return err
 	}
 
-	_, err = stateConf.WaitForState()
-
-	return err
+	return nil
 }
 
 func resourceInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
@@ -429,7 +362,7 @@ func resourceInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
 			return err
 		}
 
-		// FIXME: proper error checking
+		// FIXME: TEST
 		if res := servers.ConfirmResize(client, server.ID); res.Err != nil {
 			return res.Err
 		}
@@ -442,7 +375,7 @@ func resourceInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceInstanceRead(d *schema.ResourceData, meta interface{}) error {
+func resourceInstanceDelete(d *schema.ResourceData, meta interface{}) error {
 	if err := checkParameters(d); err != nil {
 		return err
 	}
@@ -452,11 +385,22 @@ func resourceInstanceRead(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	if err := setServerDetails(client, d.Id(), d); err != nil {
-		return err
+	server, _ := servers.Get(client, d.Id()).Extract()
+
+	servers.Delete(client, server.ID)
+
+	stateConf := &resource.StateChangeConf{
+		Pending:    []string{"ACTIVE", "ERROR"},
+		Target:     "DELETED",
+		Refresh:    waitForServerState(client, server),
+		Timeout:    30 * time.Minute,
+		Delay:      10 * time.Second,
+		MinTimeout: 3 * time.Second,
 	}
 
-	return nil
+	_, err = stateConf.WaitForState()
+
+	return err
 }
 
 func waitForServerState(client *gophercloud.ServiceClient, server *servers.Server) resource.StateRefreshFunc {
@@ -476,8 +420,6 @@ func waitForServerState(client *gophercloud.ServiceClient, server *servers.Serve
 }
 
 func checkParameters(d *schema.ResourceData) error {
-	// check for required parameters
-	// is there a better way to do this?
 	imageID := d.Get("image_id").(string)
 	imageName := d.Get("image_name").(string)
 	if imageID == "" && imageName == "" {
@@ -494,20 +436,19 @@ func checkParameters(d *schema.ResourceData) error {
 }
 
 func setServerDetails(client *gophercloud.ServiceClient, serverID string, d *schema.ResourceData) error {
-	// TODO check networks, seucrity groups and floating ip
 	server, err := servers.Get(client, serverID).Extract()
 	if err != nil {
 		return err
 	}
 	log.Printf("[INFO] Server info: %v", server)
 
-	flavor, err := flavors.Get(client, server.Flavor["id"].(string)).Extract()
+	flavor, err := getFlavor(client, server.Flavor["id"].(string))
 	if err != nil {
 		return err
 	}
 	log.Printf("[INFO] Flavor info: %v", flavor)
 
-	image, err := images.Get(client, server.Image["id"].(string)).Extract()
+	image, err := getImage(client, server.Image["id"].(string))
 	if err != nil {
 		return err
 	}
@@ -548,11 +489,59 @@ func setServerDetails(client *gophercloud.ServiceClient, serverID string, d *sch
 	return nil
 }
 
-func resourceInstanceNetwork(v interface{}) int {
+func resourceInstanceNetworkHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
 	buf.WriteString(fmt.Sprintf("%s-", m["uuid"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["port"].(string)))
 	buf.WriteString(fmt.Sprintf("%s-", m["fixed_ip"].(string)))
 	return hashcode.String(buf.String())
+}
+
+func buildInstanceNetworks(d *schema.ResourceData) []servers.Network {
+	var networks []servers.Network
+	if v, ok := d.GetOk("network"); ok {
+		log.Printf("[INFO] network: %v", v)
+		vs := v.(*schema.Set).List()
+		if len(vs) > 0 {
+			for _, v := range vs {
+				net := v.(map[string]interface{})
+				networks = append(networks, servers.Network{
+					UUID:    net["uuid"].(string),
+					Port:    net["port"].(string),
+					FixedIP: net["fixed_ip"].(string),
+				})
+			}
+		}
+	} else {
+		nets := d.Get("networks").(*schema.Set)
+		for _, v := range nets.List() {
+			log.Printf("[INFO] network: %v", v)
+			networks = append(networks, servers.Network{UUID: v.(string)})
+		}
+	}
+	return networks
+}
+
+func buildInstanceSecurityGroups(d *schema.ResourceData) []string {
+	secGroups := d.Get("security_groups").(*schema.Set)
+	var securityGroups []string
+	for _, v := range secGroups.List() {
+		securityGroups = append(securityGroups, v.(string))
+	}
+	return securityGroups
+}
+
+func buildInstanceMetadata(d *schema.ResourceData) map[string]string {
+	metadata := make(map[string]string)
+	if m, ok := d.GetOk("metadata"); ok {
+		if len(m.(map[string]interface{})) > 1 {
+			for k, v := range m.(map[string]interface{}) {
+				metadata[k] = v.(string)
+			}
+		} else {
+			metadata = nil
+		}
+	}
+	return metadata
 }

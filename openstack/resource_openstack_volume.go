@@ -161,7 +161,7 @@ func resourceVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 	imageID := d.Get("image_id").(string)
 	imageName := d.Get("image_name").(string)
 	if imageName != "" {
-		imageID, err = GetImageIDByName(client, imageName)
+		imageID, err = getImageID(client, d)
 		if err != nil {
 			return err
 		}
@@ -230,7 +230,6 @@ func resourceVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 
 				vaOpts := &volumeattach.CreateOpts{
 					Device:   device,
-					ServerID: instanceId,
 					VolumeID: newVolume.ID,
 				}
 				if _, err := volumeattach.Create(computeClient, instanceId, vaOpts).Extract(); err != nil {
@@ -338,7 +337,6 @@ func resourceVolumeUpdate(d *schema.ResourceData, meta interface{}) error {
 
 				vaOpts := &volumeattach.CreateOpts{
 					Device:   device,
-					ServerID: instanceId,
 					VolumeID: d.Id(),
 				}
 				if _, err := volumeattach.Create(computeClient, instanceId, vaOpts).Extract(); err != nil {
