@@ -216,4 +216,4 @@ network {
 
 * Eric / haklop for his initial [work](https://github.com/haklop/terraform)
 * tkak for their [object storage provider](https://github.com/tkak/terraform-provider-conoha) which I would have been lost without.
-* @jrperritt's [openstack-terraform branch](https://github.com/jrperritt/terraform/blob/openstack-gophercloud-v1.0) and patience with helping me learn this stuff.
+* jrperritt's [openstack-terraform branch](https://github.com/jrperritt/terraform/blob/openstack-gophercloud-v1.0) and patience with helping me learn this stuff.
