@@ -25,13 +25,6 @@ func resourceSecgroup() *schema.Resource {
 				ForceNew: true,
 			},
 
-			"api_version": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
-				Default:  "2",
-			},
-
 			"name": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,

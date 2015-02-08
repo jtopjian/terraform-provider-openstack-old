@@ -32,13 +32,6 @@ func resourceInstance() *schema.Resource {
 				ForceNew: true,
 			},
 
-			"api_version": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
-				Default:  "2",
-			},
-
 			"name": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
@@ -164,6 +157,31 @@ func resourceInstance() *schema.Resource {
 				Computed: true,
 			},
 
+			"volume": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Computed: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"id": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+							Computed: true,
+						},
+						"volume_id": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"device": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+							Computed: true,
+						},
+					},
+				},
+				Set: resourceComputeVolumeAttachmentHash,
+			},
+
 			// read-only
 			"created": &schema.Schema{
 				Type:     schema.TypeString,
@@ -252,6 +270,25 @@ func resourceInstanceCreate(d *schema.ResourceData, meta interface{}) error {
 
 	// get full info about the new server
 	d.SetId(newServer.ID)
+	if err := setServerDetails(client, newServer.ID, d); err != nil {
+		return err
+	}
+
+	// were volume attachments specified?
+	if v := d.Get("volume"); v != nil {
+		vols := v.(*schema.Set).List()
+		if len(vols) > 0 {
+			if blockClient, err := getClient("block", d, meta); err != nil {
+				return err
+			} else {
+				if err := attachVolumes(client, blockClient, d.Id(), vols); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	// refresh info about the server
 	if err := setServerDetails(client, newServer.ID, d); err != nil {
 		return err
 	}
@@ -377,6 +414,38 @@ func resourceInstanceUpdate(d *schema.ResourceData, meta interface{}) error {
 		d.SetPartial("flavor_ref")
 	}
 
+	// if attachments of the server have changed
+	if d.HasChange("attach") {
+		// old attachments and new attachments
+		oa, na := d.GetChange("attach")
+
+		// for each old attachment, detach the volume
+		oas := oa.(*schema.Set).List()
+		if len(oas) > 0 {
+			if blockClient, err := getClient("block", d, meta); err != nil {
+				return err
+			} else {
+				if err := detachVolumes(client, blockClient, d.Id(), oas); err != nil {
+					return err
+				}
+			}
+		}
+
+		// for each new attachment, attach the volume
+		nas := na.(*schema.Set).List()
+		if len(nas) > 0 {
+			if blockClient, err := getClient("block", d, meta); err != nil {
+				return err
+			} else {
+				if err := attachVolumes(client, blockClient, d.Id(), nas); err != nil {
+					return err
+				}
+			}
+		}
+
+		d.SetPartial("volume")
+	}
+
 	d.Partial(false)
 
 	return nil
@@ -473,6 +542,7 @@ func setServerDetails(client *gophercloud.ServiceClient, serverID string, d *sch
 	d.Set("flavor_id", flavor.ID)
 	d.Set("flavor_name", flavor.Name)
 
+	// network details
 	addrs := make(map[string]string)
 	for pool, pool_info := range server.Addresses {
 		mac_name := fmt.Sprintf("%s_mac", pool)
@@ -489,9 +559,25 @@ func setServerDetails(client *gophercloud.ServiceClient, serverID string, d *sch
 			}
 		}
 	}
-
-	d.Set("network_info", addrs)
 	log.Printf("[INFO] addrs: %v", addrs)
+	d.Set("network_info", addrs)
+
+	// volume attachments
+	vas, err := getVolumeAttachments(client, d.Id())
+	if err != nil {
+		return err
+	}
+	if len(vas) > 0 {
+		attachments := make([]map[string]interface{}, len(vas))
+		for i, attachment := range vas {
+			attachments[i] = make(map[string]interface{})
+			attachments[i]["id"] = attachment.ID
+			attachments[i]["volume_id"] = attachment.VolumeID
+			attachments[i]["device"] = attachment.Device
+		}
+		log.Printf("[INFO] Volume attachments: %v", attachments)
+		d.Set("volume", attachments)
+	}
 
 	return nil
 }
@@ -551,4 +637,11 @@ func buildInstanceMetadata(d *schema.ResourceData) map[string]string {
 		}
 	}
 	return metadata
+}
+
+func resourceComputeVolumeAttachmentHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+	buf.WriteString(fmt.Sprintf("%s-", m["volume_id"].(string)))
+	return hashcode.String(buf.String())
 }

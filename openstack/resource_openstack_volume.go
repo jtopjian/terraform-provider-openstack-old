@@ -9,17 +9,15 @@ import (
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/racker/perigee"
 	"github.com/rackspace/gophercloud"
 	"github.com/rackspace/gophercloud/openstack/blockstorage/v1/volumes"
-	"github.com/rackspace/gophercloud/openstack/compute/v2/extensions/volumeattach"
 )
 
 func resourceVolume() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceVolumeCreate,
 		Read:   resourceVolumeRead,
-		Update: resourceVolumeUpdate,
+		Update: nil,
 		Delete: resourceVolumeDelete,
 
 		Schema: map[string]*schema.Schema{
@@ -27,13 +25,6 @@ func resourceVolume() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				ForceNew: true,
-			},
-
-			"api_version": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
-				Default:  "1",
 			},
 
 			"name": &schema.Schema{
@@ -125,7 +116,7 @@ func resourceVolume() *schema.Resource {
 				Computed: true,
 			},
 
-			"attach": &schema.Schema{
+			"attachment": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
 				Computed: true,
@@ -213,49 +204,6 @@ func resourceVolumeCreate(d *schema.ResourceData, meta interface{}) error {
 
 	d.SetId(newVolume.ID)
 
-	// were attachments specified?
-	if v := d.Get("attach"); v != nil {
-		vs := v.(*schema.Set).List()
-		if len(vs) > 0 {
-			computeClient, err := getClient("compute", d, meta)
-			if err != nil {
-				return err
-			}
-
-			for _, v := range vs {
-				va := v.(map[string]interface{})
-				if err := checkAttachmentParams(va); err != nil {
-					return err
-				}
-
-				instanceId := va["instance_id"].(string)
-				device := va["device"].(string)
-
-				vaOpts := &volumeattach.CreateOpts{
-					Device:   device,
-					VolumeID: newVolume.ID,
-				}
-				if _, err := volumeattach.Create(computeClient, instanceId, vaOpts).Extract(); err != nil {
-					return err
-				}
-			}
-
-			stateConf = &resource.StateChangeConf{
-				Pending:    []string{"available", "attaching"},
-				Target:     "in-use",
-				Refresh:    waitForVolumeState(client, d.Id()),
-				Timeout:    30 * time.Minute,
-				Delay:      5 * time.Second,
-				MinTimeout: 2 * time.Second,
-			}
-
-			if _, err := stateConf.WaitForState(); err != nil {
-				return err
-			}
-
-		}
-	}
-
 	if err := setVolumeDetails(client, newVolume.ID, d); err != nil {
 		return err
 	}
@@ -276,90 +224,12 @@ func resourceVolumeRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
+/*
+// TODO: support extending volumes
 func resourceVolumeUpdate(d *schema.ResourceData, meta interface{}) error {
 	client, err := getClient("block", d, meta)
 	if err != nil {
 		return err
-	}
-
-	if d.HasChange("attach") {
-		oa, na := d.GetChange("attach")
-		oas := oa.(*schema.Set).List()
-		if len(oas) > 0 {
-			computeClient, err := getClient("compute", d, meta)
-			if err != nil {
-				return err
-			}
-
-			// just delete all old attachments
-			// kind of sloppy -- this might not be the best way
-			for _, v := range oas {
-				va := v.(map[string]interface{})
-				if err := checkAttachmentParams(va); err != nil {
-					return err
-				}
-
-				instanceId := va["instance_id"].(string)
-
-				if err := volumeattach.Delete(computeClient, instanceId, d.Id()).ExtractErr(); err != nil {
-					return err
-				}
-			}
-		}
-
-		// wait until the volume is in an available state before proceeding
-		stateConf := &resource.StateChangeConf{
-			Pending:    []string{"in-use", "detaching"},
-			Target:     "available",
-			Refresh:    waitForVolumeState(client, d.Id()),
-			Timeout:    30 * time.Minute,
-			Delay:      5 * time.Second,
-			MinTimeout: 2 * time.Second,
-		}
-
-		if _, err := stateConf.WaitForState(); err != nil {
-			return err
-		}
-
-		nas := na.(*schema.Set).List()
-		if len(nas) > 0 {
-			computeClient, err := getClient("compute", d, meta)
-			if err != nil {
-				return err
-			}
-
-			// create all new attachments
-			for _, v := range nas {
-				va := v.(map[string]interface{})
-				if err := checkAttachmentParams(va); err != nil {
-					return err
-				}
-
-				instanceId := va["instance_id"].(string)
-				device := va["device"].(string)
-
-				vaOpts := &volumeattach.CreateOpts{
-					Device:   device,
-					VolumeID: d.Id(),
-				}
-				if _, err := volumeattach.Create(computeClient, instanceId, vaOpts).Extract(); err != nil {
-					return err
-				}
-			}
-
-			stateConf = &resource.StateChangeConf{
-				Pending:    []string{"available", "attaching"},
-				Target:     "in-use",
-				Refresh:    waitForVolumeState(client, d.Id()),
-				Timeout:    30 * time.Minute,
-				Delay:      5 * time.Second,
-				MinTimeout: 2 * time.Second,
-			}
-
-			if _, err := stateConf.WaitForState(); err != nil {
-				return err
-			}
-		}
 	}
 
 	if err := setVolumeDetails(client, d.Id(), d); err != nil {
@@ -368,6 +238,7 @@ func resourceVolumeUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	return nil
 }
+*/
 
 func resourceVolumeDelete(d *schema.ResourceData, meta interface{}) error {
 	client, err := getClient("block", d, meta)
@@ -375,56 +246,37 @@ func resourceVolumeDelete(d *schema.ResourceData, meta interface{}) error {
 		return err
 	}
 
-	// were attachments specified?
-	// if so, detach them before deleting
-	if v := d.Get("attach"); v != nil {
-		vs := v.(*schema.Set).List()
-		if len(vs) > 0 {
-			computeClient, err := getClient("compute", d, meta)
-			if err != nil {
-				return err
-			}
+	if err := setVolumeDetails(client, d.Id(), d); err != nil {
+		return err
+	}
 
-			for _, v := range vs {
-				va := v.(map[string]interface{})
-				if err := checkAttachmentParams(va); err != nil {
+	// is this volume attached to an instance?
+	// if so, detach it before deleting it
+	volume, err := volumes.Get(client, d.Id()).Extract()
+	if err != nil {
+		return err
+	}
+	if len(volume.Attachments) > 0 {
+		if v := d.Get("attachment"); v != nil {
+			vols := v.(*schema.Set).List()
+			if len(vols) > 0 {
+				if computeClient, err := getClient("compute", d, meta); err != nil {
 					return err
-				}
-
-				instanceId := va["instance_id"].(string)
-
-				if err := deleteVolumeAttachment(computeClient, instanceId, d.Id()); err != nil {
-					return err
+				} else {
+					if err := detachVolumes(computeClient, client, "", vols); err != nil {
+						return err
+					}
 				}
 			}
 		}
 	}
 
-	volume, _ := volumes.Get(client, d.Id()).Extract()
-	if err != nil {
+	if err := volumes.Delete(client, d.Id()).ExtractErr(); err != nil {
 		return err
 	}
 
-	// wait until the volume is in an available state before proceeding
 	stateConf := &resource.StateChangeConf{
-		Pending:    []string{"in-use", "detaching"},
-		Target:     "available",
-		Refresh:    waitForVolumeState(client, d.Id()),
-		Timeout:    30 * time.Minute,
-		Delay:      5 * time.Second,
-		MinTimeout: 2 * time.Second,
-	}
-
-	if _, err := stateConf.WaitForState(); err != nil {
-		return err
-	}
-
-	if err := volumes.Delete(client, volume.ID).ExtractErr(); err != nil {
-		return err
-	}
-
-	stateConf = &resource.StateChangeConf{
-		Pending:    []string{"in-use", "detaching"},
+		Pending:    []string{"available"},
 		Target:     "DELETED",
 		Refresh:    waitForVolumeState(client, d.Id()),
 		Timeout:    30 * time.Minute,
@@ -458,8 +310,8 @@ func setVolumeDetails(client *gophercloud.ServiceClient, volumeID string, d *sch
 	d.Set("snapshot_id", volume.SnapshotID)
 	d.Set("source_volume_id", volume.SourceVolID)
 	d.Set("size", volume.Size)
-	log.Printf("[INFO] Volume attachments: %v", volume.Attachments)
 
+	// volume attachments
 	if len(volume.Attachments) > 0 {
 		attachments := make([]map[string]interface{}, len(volume.Attachments))
 		for i, attachment := range volume.Attachments {
@@ -469,8 +321,7 @@ func setVolumeDetails(client *gophercloud.ServiceClient, volumeID string, d *sch
 			attachments[i]["device"] = attachment["device"]
 		}
 		log.Printf("[INFO] Volume attachments: %v", attachments)
-		d.Set("attach", attachments)
-		log.Printf("[INFO] Volume attachments: %v", d.Get("attach"))
+		d.Set("attachment", attachments)
 	}
 
 	// TODO: metadata
@@ -478,35 +329,11 @@ func setVolumeDetails(client *gophercloud.ServiceClient, volumeID string, d *sch
 	return nil
 }
 
-func waitForVolumeState(client *gophercloud.ServiceClient, volumeId string) resource.StateRefreshFunc {
-	return func() (interface{}, string, error) {
-		latest, err := volumes.Get(client, volumeId).Extract()
-		if err != nil {
-			httpStatus := err.(*perigee.UnexpectedResponseCodeError)
-			if httpStatus.Actual == 404 {
-				return "", "DELETED", nil
-			}
-			return nil, "", err
-		}
-
-		log.Printf("Volume status: %v", latest.Status)
-		return latest, latest.Status, nil
-	}
-}
-
 func resourceVolumeAttachmentHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
-	buf.WriteString(fmt.Sprintf("%s-", m["instance_id"].(string)))
-	return hashcode.String(buf.String())
-}
-
-func checkAttachmentParams(va map[string]interface{}) error {
-	instanceId := va["instance_id"].(string)
-
-	if instanceId == "" {
-		return fmt.Errorf("An instance_id is required for an attachment.")
+	if m["instance_id"] != nil {
+		buf.WriteString(fmt.Sprintf("%s-", m["instance_id"].(string)))
 	}
-
-	return nil
+	return hashcode.String(buf.String())
 }

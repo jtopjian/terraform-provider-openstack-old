@@ -21,13 +21,6 @@ func resourceFloatingIP() *schema.Resource {
 				ForceNew: true,
 			},
 
-			"api_version": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				ForceNew: true,
-				Default:  "2",
-			},
-
 			"pool": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,

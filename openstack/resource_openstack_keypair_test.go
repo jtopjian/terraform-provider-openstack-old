@@ -38,7 +38,7 @@ func TestAccComputeV2Keypair(t *testing.T) {
 
 func testComputeClient() (*gophercloud.ServiceClient, error) {
 	config := testAccProvider.Meta().(*Config)
-	computeClient, err := config.computeClient(OS_REGION_NAME, "2")
+	computeClient, err := config.computeClient(OS_REGION_NAME)
 	if err != nil {
 		return nil, fmt.Errorf("Problem getting client: ", err)
 	}
