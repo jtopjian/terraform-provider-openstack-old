@@ -2,6 +2,10 @@
 
 This is an experimental OpenStack provider for Terraform. It is based off of the excellent work already done by haklop which can be found [here](https://github.com/haklop/terraform). The main difference is that it works with the latest version of gophercloud and does not need to be compiled along with the entire Terraform code.
 
+## Update
+
+This is currently on-hold. Momentum has picked up again to get an [official provider](https://github.com/hashicorp/terraform/pull/924) into Terraform.
+
 ## Warning
 
 I have almost no knowledge of Go. This work consists of me copying copying other examples and being amazed that any of this actually works. If things look sloppy and outright wrong, they are.
