@@ -142,7 +142,7 @@ metadata {
 
 ```ruby
 network {
-  UUID = "94e12a2a-d692-4e6f-8e34-560e8a97ead5"
+  uuid = "94e12a2a-d692-4e6f-8e34-560e8a97ead5"
   port_id = "(neutron port-id)" # NOT TESTED
   fixed_ip = "192.168.255.20" # NOT TESTED
 }
