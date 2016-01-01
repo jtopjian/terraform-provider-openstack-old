@@ -1,3 +1,8 @@
+
+# DO NOT USE!
+
+Terraform now has native OpenStack support. This repository exists only for historical reasons.
+
 # terraform-provider-openstack
 
 This is an experimental OpenStack provider for Terraform. It is based off of the excellent work already done by haklop which can be found [here](https://github.com/haklop/terraform). The main difference is that it works with the latest version of gophercloud and does not need to be compiled along with the entire Terraform code.
